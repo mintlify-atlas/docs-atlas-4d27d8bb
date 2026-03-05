@@ -1,0 +1,267 @@
+---
+title: 'Location Management'
+description: 'Organize nodes by geographic region or data center'
+icon: 'map-pin'
+---
+
+## What are Locations?
+
+Locations are logical groupings for nodes, typically representing:
+- Geographic regions (US-East, EU-West, Asia-Pacific)
+- Data centers (DC1, DC2, DC3)
+- Physical sites (New York, London, Tokyo)
+
+Locations help users select where their servers are hosted and simplify node organization.
+
+## Creating a Location
+
+<Steps>
+  <Step title="Navigate to locations">
+    Go to **Admin** > **Locations** in the panel.
+  </Step>
+
+  <Step title="Create location">
+    Click **Create Location** and fill in:
+
+    **Short Code** (required)
+    - Brief identifier displayed in dropdowns
+    - Examples: `us-east`, `eu-west`, `sg-1`
+    - Maximum 60 characters
+
+    **Long Name** (optional)
+    - Full descriptive name
+    - Examples: "United States - East Coast", "Singapore - DataCenter 1"
+    - Maximum 191 characters
+  </Step>
+
+  <Step title="Save and assign nodes">
+    After creating the location, assign nodes to it when registering or editing nodes.
+  </Step>
+</Steps>
+
+## Location Display
+
+Locations are shown throughout the panel:
+
+### Admin Panel
+- Node list shows location for each node
+- Server creation form filters nodes by location
+- Resource statistics are aggregated by location
+
+### User Panel
+When creating a server (if enabled):
+```
+Select Location:
+[US-East] United States - East Coast (3 nodes)
+[EU-West] Europe - Western Region (2 nodes)
+[Asia-1] Singapore - DataCenter 1 (1 node)
+```
+
+## Managing Locations
+
+### Editing Locations
+
+1. Click the **pencil icon** next to a location
+2. Update the short code or long name
+3. Click **Update**
+
+Changes are reflected immediately across all nodes in that location.
+
+### Deleting Locations
+
+<Warning>
+  You cannot delete a location that has nodes assigned to it. Reassign or remove all nodes first.
+</Warning>
+
+<Steps>
+  <Step title="Check node count">
+    The location list shows how many nodes are assigned:
+    ```
+    US-East (3 nodes)
+    EU-West (0 nodes) ← Can be deleted
+    ```
+  </Step>
+
+  <Step title="Remove nodes if needed">
+    If the location has nodes:
+    1. Navigate to **Admin** > **Nodes**
+    2. Edit each node in the location
+    3. Change its location or delete the node
+  </Step>
+
+  <Step title="Delete location">
+    Click the **trash icon** and confirm deletion.
+  </Step>
+</Steps>
+
+## Best Practices
+
+### Naming Conventions
+
+**Short Code**
+- Use lowercase with hyphens
+- Keep it concise (under 10 characters)
+- Make it unique and memorable
+
+✅ Good: `us-east`, `eu-west`, `ap-sg`  
+❌ Avoid: `Location1`, `Server_Farm_East_Coast`
+
+**Long Name**
+- Use proper capitalization
+- Include region and distinguishing features
+- Be descriptive but concise
+
+✅ Good: "United States - East Coast", "Europe - Frankfurt DC1"  
+❌ Avoid: "US", "Location in Eastern United States near New York City"
+
+### Organizing Nodes
+
+**Geographic Strategy**
+```
+us-east   → United States - East Coast
+us-west   → United States - West Coast
+eu-west   → Europe - Western Region
+eu-central → Europe - Central Region
+ap-sg     → Asia Pacific - Singapore
+ap-jp     → Asia Pacific - Japan
+```
+
+**Data Center Strategy**
+```
+dc1       → Primary Data Center
+dc2       → Secondary Data Center
+dr        → Disaster Recovery Site
+```
+
+**Performance Tier Strategy**
+```
+premium   → High-Performance Nodes
+standard  → Standard Nodes
+budget    → Budget-Friendly Nodes
+```
+
+## Location-Based Features
+
+### Server Creation
+
+When users create servers, they can:
+1. Select a location first
+2. See only nodes in that location
+3. View node-specific resource availability
+
+### Load Balancing
+
+Distribute servers across locations:
+- Automatic failover to another location
+- Geographic load distribution
+- Latency-based routing
+
+### Resource Planning
+
+Track resources by location:
+```
+US-East:
+  Memory: 128 GB total, 96 GB used (75%)
+  Disk: 2 TB total, 1.5 TB used (75%)
+  Servers: 45 of 60
+
+EU-West:
+  Memory: 64 GB total, 32 GB used (50%)
+  Disk: 1 TB total, 400 GB used (40%)
+  Servers: 20 of 40
+```
+
+## Example Configurations
+
+### Small Setup (Single Region)
+```
+us-1 → United States - Primary Location
+```
+
+All nodes go into one location. Simple and straightforward.
+
+### Medium Setup (Multi-Region)
+```
+us-east → United States - East Coast
+us-west → United States - West Coast
+eu-1    → Europe - London
+```
+
+Separate by geographic region for latency optimization.
+
+### Large Setup (Multi-Region, Multi-Tier)
+```
+us-e-prem → US East - Premium Tier
+us-e-std  → US East - Standard Tier
+us-w-prem → US West - Premium Tier
+us-w-std  → US West - Standard Tier
+eu-prem   → Europe - Premium Tier
+eu-std    → Europe - Standard Tier
+```
+
+Combine geography and performance tiers for granular control.
+
+## Troubleshooting
+
+### Cannot delete location
+**Error**: "Location has nodes assigned to it"
+
+**Solution**:
+1. List all nodes: **Admin** > **Nodes**
+2. Filter by the location
+3. Edit each node and change its location
+4. Try deleting the location again
+
+### Location not showing in server creation
+**Cause**: No nodes assigned or all nodes are offline
+
+**Solution**:
+- Assign at least one node to the location
+- Ensure nodes are online and have available resources
+- Check that nodes are marked as "Public"
+
+### Duplicate location names
+**Issue**: Similar names causing confusion
+
+**Solution**:
+- Use unique short codes
+- Add distinguishing features to long names
+- Consider a naming convention document
+
+## API Usage
+
+Locations can be managed via the API:
+
+```bash
+# Create location
+curl -X POST https://panel.example.com/api/admin/locations \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "short": "us-east",
+    "long": "United States - East Coast"
+  }'
+
+# Update location
+curl -X PATCH https://panel.example.com/api/admin/locations/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "long": "United States - East Coast (Primary)"
+  }'
+
+# Delete location
+curl -X DELETE https://panel.example.com/api/admin/locations/1 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Nodes" icon="server" href="/admin/nodes">
+    Assign nodes to locations for organization
+  </Card>
+  <Card title="Server Management" icon="gamepad-2" href="/admin/servers">
+    Create servers with location-based node selection
+  </Card>
+</CardGroup>

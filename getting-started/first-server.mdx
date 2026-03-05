@@ -1,0 +1,530 @@
+---
+title: Creating Your First Server
+description: Step-by-step guide to creating and managing your first game server in XyraPanel
+---
+
+Once XyraPanel is installed and configured, you can create your first game server. This guide walks through the complete process from setting up Wings nodes to launching your first server.
+
+<Note>
+  Before creating servers, you must have at least one **Wings node** installed and configured. Wings is the daemon that manages game servers.
+</Note>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Verify Panel is Running">
+    Confirm your panel is accessible:
+
+    ```bash
+    pm2 status xyrapanel
+    # Should show "online" status
+    ```
+
+    Access the panel at your configured URL and login with admin credentials.
+  </Step>
+
+  <Step title="Install Wings Daemon">
+    Wings must be installed on a server (can be the same server as the panel or a separate node).
+
+    See the [Wings Installation Guide](/admin/nodes) for detailed instructions.
+
+    <Info>
+      Wings handles Docker container management, resource allocation, and server monitoring.
+    </Info>
+  </Step>
+</Steps>
+
+## Step 1: Add a Wings Node
+
+<Steps>
+  <Step title="Navigate to Node Management">
+    1. Login to your XyraPanel admin account
+    2. Go to **Admin** → **Nodes**
+    3. Click **Create Node**
+  </Step>
+
+  <Step title="Configure Node Details">
+    Fill in the node configuration:
+
+    **Basic Information:**
+    - **Name:** `node-01` (or any descriptive name)
+    - **Description:** `Primary game server node`
+    - **FQDN:** `node1.yourdomain.com` (or server IP)
+    - **Scheme:** `https` (use `http` for testing without SSL)
+    - **Behind Proxy:** Check if using Cloudflare or reverse proxy
+
+    **Connection:**
+    - **Daemon Port:** `8080` (default Wings port)
+    - **SFTP Port:** `2022` (default Wings SFTP port)
+
+    **Resource Limits:**
+    - **Memory:** Total RAM available for servers (e.g., `8192` MB)
+    - **Disk:** Total disk space for servers (e.g., `102400` MB)
+    - **Memory Over-allocate:** `0` (percentage to allow over 100%)
+    - **Disk Over-allocate:** `0`
+
+    <Warning>
+      FQDN must be resolvable and accessible from the panel. Use IP address if DNS is not configured.
+    </Warning>
+  </Step>
+
+  <Step title="Create and Configure Wings">
+    After creating the node:
+
+    1. Click on your newly created node
+    2. Navigate to the **Configuration** tab
+    3. Copy the Wings configuration YAML
+    4. On your Wings server, save it to `/etc/pterodactyl/config.yml`
+
+    ```bash
+    # On Wings server
+    sudo mkdir -p /etc/pterodactyl
+    sudo nano /etc/pterodactyl/config.yml
+    # Paste the configuration
+    ```
+
+    5. Start Wings:
+
+    ```bash
+    sudo systemctl start wings
+    sudo systemctl enable wings
+    ```
+
+    6. Verify Wings is running:
+
+    ```bash
+    sudo systemctl status wings
+    ```
+  </Step>
+
+  <Step title="Add Allocations">
+    Allocations are IP:Port combinations that servers bind to.
+
+    1. In the node details, go to **Allocations**
+    2. Click **Create Allocations**
+    3. Configure:
+       - **IP Address:** Server's public IP or `0.0.0.0`
+       - **Port Range:** `25565-25575` (for Minecraft, adjust per game)
+    4. Click **Create**
+
+    <Info>
+      Each server needs at least one allocation. Create enough for all planned servers.
+    </Info>
+  </Step>
+</Steps>
+
+## Step 2: Create a Server
+
+<Steps>
+  <Step title="Navigate to Server Creation">
+    1. Go to **Admin** → **Servers**
+    2. Click **Create Server**
+  </Step>
+
+  <Step title="Configure Server Details">
+    **General Information:**
+
+    - **Server Name:** `My Minecraft Server`
+    - **Description:** `Vanilla Minecraft server for friends`
+    - **Owner:** Select the user who will own this server
+
+    <Info>
+      If you don't have additional users yet, select your admin account as the owner.
+    </Info>
+  </Step>
+
+  <Step title="Select Node and Allocation">
+    **Deployment:**
+
+    - **Node:** Select the Wings node you created
+    - **Primary Allocation:** Choose an available IP:Port from the dropdown
+
+    <Note>
+      Only unassigned allocations from the selected node will appear in the dropdown.
+    </Note>
+  </Step>
+
+  <Step title="Configure Resources">
+    **Resource Limits:**
+
+    Set resource limits for this server:
+
+    - **Memory:** `2048` MB (2GB for Minecraft)
+    - **Swap:** `0` MB (recommended)
+    - **Disk Space:** `10240` MB (10GB)
+    - **CPU Limit:** `100` % (100% = 1 core, 200% = 2 cores)
+    - **CPU Threads:** Leave empty for all threads, or specify (e.g., `0-3`)
+
+    **Feature Limits:**
+
+    - **Databases:** `2` (MySQL databases this server can create)
+    - **Allocations:** `5` (additional IP:Port assignments)
+    - **Backups:** `3` (number of backups allowed)
+
+    <Warning>
+      Ensure total allocated resources don't exceed your node's available resources.
+    </Warning>
+  </Step>
+
+  <Step title="Select Nest and Egg">
+    **Server Configuration:**
+
+    - **Nest:** `Minecraft` (game type category)
+    - **Egg:** `Vanilla Minecraft` (or Paper, Forge, etc.)
+
+    <Info>
+      Nests are game categories (Minecraft, Source Engine, etc.). Eggs are specific server types within a nest.
+    </Info>
+  </Step>
+
+  <Step title="Configure Startup Command">
+    The startup command and Docker image are pre-filled from the egg.
+
+    **Startup Command Example (Minecraft):**
+    ```bash
+    java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar {{SERVER_JARFILE}}
+    ```
+
+    **Docker Image:**
+    ```
+    ghcr.io/pterodactyl/yolks:java_17
+    ```
+
+    <Tip>
+      Don't modify these unless you know what you're doing. The default values work for most cases.
+    </Tip>
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Set game-specific variables:
+
+    **Minecraft Example:**
+    - **Server Jar File:** `server.jar`
+    - **Minecraft Version:** `latest` or `1.20.4`
+    - **Build Number:** `latest`
+
+    These variables vary by egg. Fill in the required values shown in the form.
+  </Step>
+
+  <Step title="Additional Options">
+    **Advanced Settings:**
+
+    - **Start Server After Install:** ✅ Check to auto-start (recommended)
+    - **Skip Egg Install Script:** ⬜ Leave unchecked for first install
+    - **OOM Disabled:** ✅ Prevent Linux from killing the container on memory limit
+
+    <Warning>
+      Skipping install scripts will create a server without downloading game files. Only use for troubleshooting.
+    </Warning>
+  </Step>
+
+  <Step title="Create Server">
+    Click **Create Server**
+
+    The panel will:
+    1. Create the server in the database
+    2. Assign the allocation
+    3. Send provisioning request to Wings
+    4. Wings will pull the Docker image
+    5. Run the egg install script
+    6. Start the server (if enabled)
+
+    This process takes 2-10 minutes depending on the game and server speed.
+  </Step>
+</Steps>
+
+## Step 3: Monitor Installation
+
+<Steps>
+  <Step title="View Server in User Panel">
+    1. Switch from Admin panel to User panel
+    2. Click on your newly created server
+    3. You'll see the server dashboard
+  </Step>
+
+  <Step title="Watch Installation Console">
+    The console will show real-time installation progress:
+
+    ```log
+    [Pterodactyl Daemon] Pulling Docker image...
+    [Pterodactyl Daemon] Image pulled successfully
+    [Pterodactyl Daemon] Running installation script...
+    [Installer] Downloading server.jar...
+    [Installer] Installation complete!
+    [Pterodactyl Daemon] Server container started
+    [Server] Starting Minecraft server...
+    [Server] Done! Server is running on *:25565
+    ```
+
+    <Info>
+      Installation logs vary by game type. Wait for the "Installation complete" message.
+    </Info>
+  </Step>
+
+  <Step title="Check Server Status">
+    Once installation completes:
+
+    - **Status:** Should show "Online" or "Running"
+    - **Resource Usage:** CPU, RAM, and network stats will appear
+    - **Console:** Live server logs and command input
+
+    <Tip>
+      If the server shows "Offline" after installation, click the **Start** button in the power controls.
+    </Tip>
+  </Step>
+</Steps>
+
+## Step 4: Connect to Your Server
+
+<Steps>
+  <Step title="Get Connection Details">
+    In the server dashboard:
+
+    - **Server Address:** `node1.yourdomain.com:25565` (shown in the allocation section)
+    - Copy the IP:Port to connect
+  </Step>
+
+  <Step title="Connect from Game Client">
+    **Minecraft Example:**
+
+    1. Open Minecraft
+    2. Click **Multiplayer** → **Add Server**
+    3. **Server Address:** `your-node-ip:25565`
+    4. Click **Done** and join
+
+    <Success>
+      You should successfully connect to your server!
+    </Success>
+  </Step>
+
+  <Step title="Configure Server Settings">
+    Use the console to send commands:
+
+    ```bash
+    # Minecraft example commands
+    op YourUsername
+    difficulty hard
+    gamerule keepInventory true
+    ```
+
+    Or edit configuration files directly using the **Files** tab.
+  </Step>
+</Steps>
+
+## Common Server Management Tasks
+
+### Power Controls
+
+<CardGroup cols={2}>
+  <Card title="Start" icon="play">
+    Starts a stopped server
+  </Card>
+  <Card title="Stop" icon="stop">
+    Gracefully stops the server (sends stop command)
+  </Card>
+  <Card title="Restart" icon="rotate">
+    Stops then starts the server
+  </Card>
+  <Card title="Kill" icon="skull">
+    Force kills the server process (use if unresponsive)
+  </Card>
+</CardGroup>
+
+### File Management
+
+<Steps>
+  <Step title="Access Files Tab">
+    Click **Files** in the server navigation
+  </Step>
+
+  <Step title="Edit Configuration Files">
+    **Common Files:**
+    - `server.properties` - Minecraft settings
+    - `config/` - Plugin/mod configurations
+    - `world/` - World save data
+
+    Click any file to edit in the built-in editor.
+  </Step>
+
+  <Step title="Upload Files">
+    Use the **Upload** button to add:
+    - Custom maps
+    - Plugins/mods
+    - Configuration files
+
+    Maximum upload size: 20MB (configurable in `.env`)
+  </Step>
+
+  <Step title="Create Backups">
+    Go to **Backups** tab → **Create Backup**
+
+    Backups include:
+    - All server files
+    - World data
+    - Configuration
+
+    <Warning>
+      Backups count toward your disk quota. Delete old backups regularly.
+    </Warning>
+  </Step>
+</Steps>
+
+### Creating Databases
+
+<Steps>
+  <Step title="Navigate to Databases Tab">
+    Click **Databases** in the server menu
+  </Step>
+
+  <Step title="Create Database">
+    1. Click **Create Database**
+    2. **Database Name:** `minecraft_db`
+    3. **Remote:** `%` (allow connections from anywhere)
+    4. Click **Create**
+  </Step>
+
+  <Step title="View Credentials">
+    The database credentials will be displayed:
+    - **Hostname:** `database-host.com`
+    - **Port:** `3306`
+    - **Database:** `s1_minecraft_db`
+    - **Username:** `u1_xxxxxx`
+    - **Password:** `[click to reveal]`
+
+    Use these in your plugin configurations.
+  </Step>
+</Steps>
+
+### Scheduling Tasks
+
+<Steps>
+  <Step title="Go to Schedules Tab">
+    Click **Schedules** in the server navigation
+  </Step>
+
+  <Step title="Create Schedule">
+    1. Click **Create Schedule**
+    2. **Schedule Name:** `Daily Restart`
+    3. **Cron Expression:** `0 4 * * *` (4 AM daily)
+    4. Click **Create**
+  </Step>
+
+  <Step title="Add Tasks">
+    1. Click on your schedule
+    2. Click **New Task**
+    3. **Action:** `Send Power Action`
+    4. **Payload:** `restart`
+    5. **Time Offset:** `0` seconds
+    6. Click **Create**
+
+    <Info>
+      You can chain multiple tasks (e.g., send warning → wait 60s → restart).
+    </Info>
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Server stuck in 'Installing' status">
+    **Possible causes:**
+    - Wings daemon not running
+    - Docker image pull failed
+    - Network connectivity issues
+
+    **Solutions:**
+
+    1. Check Wings status on the node:
+       ```bash
+       sudo systemctl status wings
+       sudo journalctl -u wings -f
+       ```
+
+    2. Check Docker on Wings server:
+       ```bash
+       sudo docker ps
+       sudo docker images
+       ```
+
+    3. Manually pull the Docker image:
+       ```bash
+       sudo docker pull ghcr.io/pterodactyl/yolks:java_17
+       ```
+
+    4. Reinstall the server from the panel
+  </Accordion>
+
+  <Accordion title="Cannot connect to server">
+    **Checklist:**
+
+    - ✅ Server status shows "Online"
+    - ✅ Firewall allows the port (e.g., 25565)
+    - ✅ Allocation IP:Port is correct
+    - ✅ Server actually finished starting (check console)
+
+    **Test connectivity:**
+
+    ```bash
+    # From Wings server
+    sudo ufw status
+    sudo ufw allow 25565/tcp
+
+    # Test port is open
+    nc -zv node-ip 25565
+    ```
+  </Accordion>
+
+  <Accordion title="Server crashes on start">
+    **Common causes:**
+    - Insufficient memory allocation
+    - Corrupt world data
+    - Incompatible plugins/mods
+
+    **Solutions:**
+
+    1. Check console for error messages
+    2. Increase memory limit in Admin → Servers → Edit
+    3. Restore from backup
+    4. Remove plugins one-by-one to identify issues
+  </Accordion>
+
+  <Accordion title="Out of disk space">
+    **Check disk usage:**
+
+    ```bash
+    # On Wings server
+    df -h /var/lib/pterodactyl/volumes
+    ```
+
+    **Solutions:**
+
+    - Delete old backups
+    - Clean up log files
+    - Increase disk limit on the node
+    - Add more physical disk space
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="User Management" icon="users" href="/admin/users">
+    Create users and assign servers
+  </Card>
+  <Card title="Nests & Eggs" icon="egg" href="/admin/nests">
+    Configure game server types
+  </Card>
+  <Card title="Advanced Node Config" icon="server" href="/wings/configuration">
+    Optimize Wings performance
+  </Card>
+  <Card title="Backup Management" icon="floppy-disk" href="/features/backups">
+    Set up automatic backups
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [Server Permissions](/admin/users) - Configure user access levels
+- [SFTP Access](/servers/file-management) - Use FTP clients to manage files
+- [API Documentation](/api/overview) - Automate server management
+- [Discord Community](https://xyrapanel.com/discord) - Get help from the community

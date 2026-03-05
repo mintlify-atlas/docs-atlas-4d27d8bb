@@ -1,0 +1,133 @@
+---
+title: 'List Servers'
+description: 'Retrieve a list of all servers accessible by the authenticated user'
+api: 'GET /api/servers'
+---
+
+Retrieves a paginated list of all servers that the authenticated user has access to. By default, this returns servers owned by the user. Admin users can optionally retrieve all servers in the system.
+
+## Authentication
+
+Requires a valid session token. The response will vary based on the user's role and permissions.
+
+## Query Parameters
+
+<ParamField query="scope" type="string" default="own">
+  Controls which servers are returned:
+  - `own` - Returns only servers owned by the authenticated user
+  - `all` - Returns all servers (requires admin role)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="array">
+  Array of server entries
+  <Expandable title="ServerListEntry">
+    <ResponseField name="uuid" type="string" required>
+      Unique identifier for the server
+    </ResponseField>
+    <ResponseField name="identifier" type="string" required>
+      Short identifier for the server (used in URLs)
+    </ResponseField>
+    <ResponseField name="name" type="string" required>
+      Display name of the server
+    </ResponseField>
+    <ResponseField name="description" type="string | null">
+      Optional description of the server
+    </ResponseField>
+    <ResponseField name="nodeId" type="string" required>
+      ID of the Wings node hosting this server
+    </ResponseField>
+    <ResponseField name="nodeName" type="string" required>
+      Display name of the Wings node
+    </ResponseField>
+    <ResponseField name="status" type="string" required>
+      Current server status: `offline`, `starting`, `running`, `stopping`, or `stopped`
+    </ResponseField>
+    <ResponseField name="suspended" type="boolean" required>
+      Whether the server is suspended
+    </ResponseField>
+    <ResponseField name="ownership" type="string" required>
+      Ownership status: `mine` or `shared`
+    </ResponseField>
+    <ResponseField name="limits" type="object | null">
+      Server resource limits
+      <Expandable title="Limits">
+        <ResponseField name="cpu" type="number | null">
+          CPU limit in percentage
+        </ResponseField>
+        <ResponseField name="memory" type="number | null">
+          Memory limit in megabytes
+        </ResponseField>
+        <ResponseField name="disk" type="number | null">
+          Disk limit in megabytes
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="featureLimits" type="object | null">
+      Feature-specific limits (reserved for future use)
+    </ResponseField>
+    <ResponseField name="primaryAllocation" type="string | null">
+      Primary IP:port allocation in format `ip:port`
+    </ResponseField>
+    <ResponseField name="isTransferring" type="boolean">
+      Whether the server is currently being transferred to another node
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="generatedAt" type="string" required>
+  ISO 8601 timestamp of when the response was generated
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET "https://panel.example.com/api/servers?scope=own" \
+  -H "Cookie: session=your-session-token"
+```
+
+## Example Response
+
+```json
+{
+  "data": [
+    {
+      "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "identifier": "my-server",
+      "name": "My Game Server",
+      "description": "Production Minecraft server",
+      "nodeId": "node-uuid-123",
+      "nodeName": "US-East-1",
+      "status": "running",
+      "suspended": false,
+      "ownership": "mine",
+      "limits": {
+        "cpu": 200,
+        "memory": 4096,
+        "disk": 10240
+      },
+      "featureLimits": null,
+      "primaryAllocation": "192.168.1.100:25565",
+      "isTransferring": false
+    }
+  ],
+  "generatedAt": "2024-03-05T12:00:00.000Z"
+}
+```
+
+## Error Responses
+
+<ResponseField name="403" type="Forbidden">
+  Returned when a non-admin user attempts to use `scope=all`
+  ```json
+  {
+    "status": 403,
+    "message": "Forbidden: Admin access required to view all servers"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Returned when the request lacks valid authentication
+</ResponseField>

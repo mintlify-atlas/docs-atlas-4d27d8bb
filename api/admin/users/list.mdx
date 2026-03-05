@@ -1,0 +1,155 @@
+---
+title: 'List Users'
+api: 'GET /api/admin/users'
+description: 'Retrieve a paginated list of all users'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `users:read` permission.
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination (minimum: 1)
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  Number of users per page (1-100)
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search by email or username (partial match)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="array">
+  Array of user objects
+  
+  <Expandable title="User Object">
+    <ResponseField name="id" type="string">
+      User UUID
+    </ResponseField>
+    
+    <ResponseField name="username" type="string">
+      Username (falls back to email if not set)
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string" nullable>
+      Full name (first + last name)
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role: `user` or `admin`
+    </ResponseField>
+    
+    <ResponseField name="rootAdmin" type="boolean">
+      Whether the user has root admin privileges
+    </ResponseField>
+    
+    <ResponseField name="suspended" type="boolean">
+      Whether the user is suspended (banned)
+    </ResponseField>
+    
+    <ResponseField name="emailVerified" type="boolean">
+      Whether the email is verified
+    </ResponseField>
+    
+    <ResponseField name="twoFactorEnabled" type="boolean">
+      Whether 2FA/TOTP is enabled
+    </ResponseField>
+    
+    <ResponseField name="passwordResetRequired" type="boolean">
+      Whether user must reset password on next login
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of account creation
+    </ResponseField>
+    
+    <ResponseField name="serversOwned" type="integer">
+      Number of servers owned by this user
+    </ResponseField>
+    
+    <ResponseField name="serversAccess" type="integer">
+      Number of servers user has access to
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination information
+  
+  <Expandable title="Pagination Object">
+    <ResponseField name="page" type="integer">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="perPage" type="integer">
+      Users per page
+    </ResponseField>
+    
+    <ResponseField name="total" type="integer">
+      Total number of users
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="integer">
+      Total number of pages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash List All Users
+curl -X GET "https://panel.example.com/api/admin/users?page=1&limit=50" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+```bash Search Users
+curl -X GET "https://panel.example.com/api/admin/users?search=john" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": [
+    {
+      "id": "user-uuid-1",
+      "username": "john.doe",
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "role": "user",
+      "rootAdmin": false,
+      "suspended": false,
+      "emailVerified": true,
+      "twoFactorEnabled": true,
+      "passwordResetRequired": false,
+      "createdAt": "2024-01-15T10:30:00Z",
+      "serversOwned": 3,
+      "serversAccess": 3
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "perPage": 50,
+    "total": 150,
+    "totalPages": 3
+  }
+}
+```
+</ResponseExample>
+
+## Notes
+
+- Results are ordered by creation date (newest first)
+- Search is case-insensitive and matches partial strings
+- The `serversOwned` count is calculated via SQL query

@@ -1,0 +1,395 @@
+---
+title: 'User Management'
+description: 'Create and manage panel users and permissions'
+icon: 'users'
+---
+
+## Overview
+
+User management controls who can access your XyraPanel and what actions they can perform. The panel supports two main roles:
+
+- **Admin**: Full access to all panel features, servers, and settings
+- **User**: Limited to accessing their own servers and account settings
+
+## Creating Users
+
+<Steps>
+  <Step title="Navigate to users">
+    Go to **Admin** > **Users** in the panel.
+  </Step>
+
+  <Step title="Create new user">
+    Click **Create User** and fill in:
+
+    **Username** (required)
+    - Unique identifier for login
+    - Alphanumeric, underscores allowed
+    - Example: `john_doe`, `player123`
+
+    **Email** (required)
+    - User's email address
+    - Used for notifications and password resets
+    - Must be unique
+
+    **Password** (required for new users)
+    - Initial password
+    - User can change it after first login
+    - Leave blank when editing to keep existing password
+
+    **Role**
+    - **User**: Standard access (default)
+    - **Admin**: Full administrative access
+  </Step>
+
+  <Step title="Save and notify">
+    Click **Create** to save the user. Optionally send them their credentials via email.
+  </Step>
+</Steps>
+
+## User List
+
+The user list displays:
+
+| Column | Description |
+|--------|-------------|
+| **User** | Username, name, and avatar |
+| **Email** | Contact email address |
+| **2FA** | Two-factor authentication status (🔒 enabled / 🔓 disabled) |
+| **Servers** | Owned servers / Total accessible servers |
+| **Role** | Admin or User badge |
+| **Created** | Account creation date |
+| **Actions** | View, Edit, Delete buttons |
+
+### Searching Users
+
+Click **Search** to find users by:
+- Username
+- Email address
+- Name
+
+The search uses fuzzy matching to find partial matches.
+
+## Editing Users
+
+<Steps>
+  <Step title="Open user editor">
+    Click the **pencil icon** next to a user, or search and select them.
+  </Step>
+
+  <Step title="Update details">
+    Modify any of:
+    - Username
+    - Email address
+    - Password (leave blank to keep current)
+    - Role (User ↔️ Admin)
+  </Step>
+
+  <Step title="Save changes">
+    Click **Update** to apply changes immediately.
+  </Step>
+</Steps>
+
+<Warning>
+  Changing a user's role to Admin grants them full access to all servers, settings, and administrative functions.
+</Warning>
+
+## User Profile
+
+Click **View Profile** (user icon) to see detailed user information:
+
+### Account Overview
+- Username and email
+- Account creation date
+- Last login timestamp
+- Two-factor authentication status
+
+### Servers
+List of servers the user:
+- **Owns**: Servers created by or assigned to this user
+- **Has Access To**: Servers they can access via subuser permissions
+
+### Activity Log
+Recent actions by the user:
+- Server creations/deletions
+- File modifications
+- Power actions (start, stop, restart)
+- Setting changes
+
+### API Keys
+User-created API keys for programmatic access:
+- Key identifier
+- Creation date
+- Last used timestamp
+- Permissions scope
+
+<Warning>
+  Admins can view and delete user API keys, but cannot see the actual key tokens.
+</Warning>
+
+## User Actions
+
+### Impersonate User
+
+Log in as another user to troubleshoot issues or assist them:
+
+<Steps>
+  <Step title="Start impersonation">
+    From the user profile, click **Impersonate**.
+  </Step>
+
+  <Step title="Access their account">
+    You'll be logged in as that user and see their interface exactly as they do.
+  </Step>
+
+  <Step title="End impersonation">
+    Click **Stop Impersonating** in the header to return to your admin account.
+  </Step>
+</Steps>
+
+<Warning>
+  All actions performed while impersonating are logged under your admin account, not the user's.
+</Warning>
+
+### Suspend User
+
+Temporarily disable a user's access:
+
+<Steps>
+  <Step title="Open user profile">
+    Navigate to **Admin** > **Users** > **[Username]**.
+  </Step>
+
+  <Step title="Suspend account">
+    Click **Suspend** in the actions menu.
+  </Step>
+
+  <Step title="Confirm suspension">
+    The user will be immediately logged out and cannot log back in until unsuspended.
+  </Step>
+</Steps>
+
+Suspended users:
+- Cannot log in to the panel
+- Cannot access their servers
+- Their servers continue running
+
+To unsuspend, click **Unsuspend** from the user profile.
+
+### Reset Password
+
+Force a password reset for a user:
+
+<Steps>
+  <Step title="Initiate reset">
+    From the user profile, click **Reset Password**.
+  </Step>
+
+  <Step title="Choose method">
+    **Send Reset Email**: User receives a password reset link  
+    **Set New Password**: You provide a new password immediately
+  </Step>
+
+  <Step title="Notify user">
+    Inform the user of the password change via your preferred communication method.
+  </Step>
+</Steps>
+
+### Disable 2FA
+
+Remove two-factor authentication if a user loses access:
+
+<Steps>
+  <Step title="Access security settings">
+    From the user profile, go to the **Security** tab.
+  </Step>
+
+  <Step title="Disable 2FA">
+    Click **Disable 2FA** and confirm.
+  </Step>
+</Steps>
+
+<Warning>
+  Disabling 2FA reduces account security. Encourage the user to re-enable it after logging in.
+</Warning>
+
+### Verify Email
+
+Manually mark a user's email as verified:
+
+<Steps>
+  <Step title="Access user profile">
+    Navigate to the user's profile page.
+  </Step>
+
+  <Step title="Mark as verified">
+    Click **Mark Email Verified** in the actions menu.
+  </Step>
+</Steps>
+
+This bypasses the email verification email if:
+- The verification email wasn't received
+- Email sending is not configured
+- The user's email is known to be valid
+
+## Deleting Users
+
+<Warning>
+  Deleting a user is permanent and cannot be undone. All associated data will be removed.
+</Warning>
+
+<Steps>
+  <Step title="Open deletion dialog">
+    Click the **trash icon** next to a user.
+  </Step>
+
+  <Step title="Confirm deletion">
+    Review the warning:
+    - User account will be deleted
+    - User's API keys will be revoked
+    - User's subuser permissions will be removed
+    - User's owned servers will be **deleted**
+  </Step>
+
+  <Step title="Delete user">
+    Click **Delete User** to confirm.
+  </Step>
+</Steps>
+
+**What happens to servers?**
+- Servers **owned** by the user are **deleted**
+- Servers they had subuser access to remain unaffected
+- If you want to keep their servers, transfer ownership first
+
+## Bulk Operations
+
+### Exporting Users
+
+Export user data for backup or migration:
+
+```bash
+curl -X GET https://panel.example.com/api/admin/users \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Accept: application/json" \
+  > users-backup.json
+```
+
+### Importing Users
+
+Create multiple users via API:
+
+```bash
+for user in $(cat users.csv); do
+  username=$(echo $user | cut -d',' -f1)
+  email=$(echo $user | cut -d',' -f2)
+  
+  curl -X POST https://panel.example.com/api/admin/users \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "username": "'$username'",
+      "email": "'$email'",
+      "password": "ChangeMeAfterLogin",
+      "role": "user"
+    }'
+done
+```
+
+## User Statistics
+
+The user list footer shows:
+- **Total users**: All registered accounts
+- **Admin users**: Users with admin role
+- **Active sessions**: Currently logged-in users
+- **New this month**: Accounts created in the last 30 days
+
+## Permissions
+
+### Admin Role
+
+Admins can:
+- ✅ View and manage all servers
+- ✅ Create and delete servers
+- ✅ Manage users and roles
+- ✅ Configure nodes and allocations
+- ✅ Access system settings
+- ✅ View activity logs
+- ✅ Manage API keys
+
+### User Role
+
+Users can:
+- ✅ Access their own servers
+- ✅ Manage server files and databases
+- ✅ Create subusers for their servers
+- ✅ Change their own account settings
+- ❌ View other users' servers
+- ❌ Access admin panel
+- ❌ Modify system settings
+
+## Security Best Practices
+
+### Strong Passwords
+
+✅ **Enforce requirements**:
+- Minimum 8 characters
+- Mix of uppercase, lowercase, numbers
+- Special characters recommended
+
+❌ **Avoid**:
+- Common passwords (password123)
+- Personal information (birthdays)
+- Reused passwords from other services
+
+### Two-Factor Authentication
+
+Encourage all users (especially admins) to enable 2FA:
+
+1. User goes to **Account Settings** > **Security**
+2. Clicks **Enable Two-Factor Authentication**
+3. Scans QR code with authenticator app
+4. Enters verification code to confirm
+
+### Role Assignment
+
+✅ **Principle of least privilege**:
+- Only assign admin role when necessary
+- Create separate accounts for different roles
+- Regularly review admin access
+
+❌ **Avoid**:
+- Making everyone an admin
+- Sharing admin accounts
+- Leaving unused admin accounts active
+
+## Troubleshooting
+
+### User can't log in
+**Check**:
+- Username and email are correct
+- Account is not suspended
+- Password hasn't expired
+- Email is verified (if required)
+
+### User doesn't receive emails
+**Verify**:
+- Email address is correct
+- Mail server is configured
+- Emails aren't in spam folder
+- Check panel mail logs
+
+### User sees wrong servers
+**Ensure**:
+- User is logged in as correct account (not impersonating)
+- Server ownership is assigned correctly
+- Subuser permissions are configured
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Server Management" icon="gamepad-2" href="/admin/servers">
+    Assign servers to users
+  </Card>
+  <Card title="API Keys" icon="key" href="/admin/api-keys">
+    Create API keys for users
+  </Card>
+</CardGroup>

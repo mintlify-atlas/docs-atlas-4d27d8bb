@@ -1,0 +1,137 @@
+---
+title: "Account Profile"
+description: "Get and update your account profile information"
+---
+
+## Get Profile
+
+<RequestExample>
+```bash GET /api/account/profile
+curl -X GET "https://panel.example.com/api/account/profile" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+Retrieve the authenticated user's profile information.
+
+### Response
+
+<ResponseField name="data" type="object">
+  The user profile object.
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string" required>
+      The unique identifier of the user.
+    </ResponseField>
+    
+    <ResponseField name="username" type="string" required>
+      The username of the account.
+    </ResponseField>
+    
+    <ResponseField name="email" type="string" required>
+      The email address of the account.
+    </ResponseField>
+    
+    <ResponseField name="role" type="string" required>
+      The role of the user. Can be `admin` or `user`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "clx1a2b3c4d5e6f7g8h9i0j1",
+    "username": "johndoe",
+    "email": "john@example.com",
+    "role": "user"
+  }
+}
+```
+</ResponseExample>
+
+## Update Profile
+
+<RequestExample>
+```bash PUT /api/account/profile
+curl -X PUT "https://panel.example.com/api/account/profile" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newusername",
+    "email": "newemail@example.com"
+  }'
+```
+</RequestExample>
+
+Update the authenticated user's profile information.
+
+### Request Body
+
+<ParamField body="username" type="string" optional>
+  New username for the account. Must be between 3 and 191 characters.
+</ParamField>
+
+<ParamField body="email" type="string" optional>
+  New email address for the account. Must be a valid email and under 191 characters.
+  
+  <Note>
+    If email configuration is enabled, a verification email will be sent and the change will be pending until verified.
+  </Note>
+</ParamField>
+
+<Info>
+  At least one field (`username` or `email`) must be provided.
+</Info>
+
+### Response
+
+<ResponseField name="data" type="object">
+  The updated user profile object.
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string" required>
+      The unique identifier of the user.
+    </ResponseField>
+    
+    <ResponseField name="username" type="string" required>
+      The updated username of the account.
+    </ResponseField>
+    
+    <ResponseField name="email" type="string" required>
+      The email address of the account.
+    </ResponseField>
+    
+    <ResponseField name="role" type="string" required>
+      The role of the user.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "clx1a2b3c4d5e6f7g8h9i0j1",
+    "username": "newusername",
+    "email": "newemail@example.com",
+    "role": "user"
+  }
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+<ResponseField name="409" type="error">
+  Username is already in use by another account.
+</ResponseField>
+
+<ResponseField name="400" type="error">
+  Invalid request body or validation failed.
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  User not found.
+</ResponseField>

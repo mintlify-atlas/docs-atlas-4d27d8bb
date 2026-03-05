@@ -1,0 +1,233 @@
+---
+title: "SSH Keys"
+description: "Manage SSH public keys for server access"
+---
+
+## List SSH Keys
+
+<RequestExample>
+```bash GET /api/account/ssh-keys
+curl -X GET "https://panel.example.com/api/account/ssh-keys?page=1&limit=50" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+Retrieve a paginated list of SSH keys for the authenticated user.
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  The page number to retrieve (minimum: 1).
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Number of items per page (minimum: 1, maximum: 100).
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of SSH key objects.
+  
+  <Expandable title="SSH Key Object">
+    <ResponseField name="id" type="string" required>
+      The unique identifier of the SSH key.
+    </ResponseField>
+    
+    <ResponseField name="name" type="string" required>
+      The friendly name for the SSH key.
+    </ResponseField>
+    
+    <ResponseField name="fingerprint" type="string" required>
+      SHA256 fingerprint of the public key.
+    </ResponseField>
+    
+    <ResponseField name="public_key" type="string" required>
+      The full SSH public key string.
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string" required>
+      ISO 8601 timestamp of when the key was created.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata.
+  
+  <Expandable title="properties">
+    <ResponseField name="page" type="number" required>
+      Current page number.
+    </ResponseField>
+    
+    <ResponseField name="perPage" type="number" required>
+      Number of items per page.
+    </ResponseField>
+    
+    <ResponseField name="total" type="number" required>
+      Total number of SSH keys.
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="number" required>
+      Total number of pages.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "data": [
+    {
+      "id": "clx1a2b3c4d5e6f7g8h9i0j1",
+      "name": "Work Laptop",
+      "fingerprint": "SHA256:abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
+      "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl",
+      "created_at": "2024-01-15T10:30:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "perPage": 50,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+</ResponseExample>
+
+## Create SSH Key
+
+<RequestExample>
+```bash POST /api/account/ssh-keys
+curl -X POST "https://panel.example.com/api/account/ssh-keys" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Work Laptop",
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl user@example.com"
+  }'
+```
+</RequestExample>
+
+Add a new SSH public key to the authenticated user's account.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  A friendly name for the SSH key (maximum 255 characters).
+</ParamField>
+
+<ParamField body="publicKey" type="string" required>
+  The SSH public key string. Must be a valid SSH public key in OpenSSH format.
+  
+  Supported key types:
+  - `ssh-rsa`
+  - `ssh-dss`
+  - `ssh-ed25519`
+  - `ecdsa-sha2-nistp256`
+  - `ecdsa-sha2-nistp384`
+  - `ecdsa-sha2-nistp521`
+</ParamField>
+
+<Info>
+  Each account can have a maximum of 25 SSH keys.
+</Info>
+
+### Response
+
+<ResponseField name="data" type="object">
+  The created SSH key object.
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string" required>
+      The unique identifier of the SSH key.
+    </ResponseField>
+    
+    <ResponseField name="name" type="string" required>
+      The friendly name for the SSH key.
+    </ResponseField>
+    
+    <ResponseField name="fingerprint" type="string" required>
+      SHA256 fingerprint of the public key.
+    </ResponseField>
+    
+    <ResponseField name="public_key" type="string" required>
+      The full SSH public key string.
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string" required>
+      ISO 8601 timestamp of creation.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "clx1a2b3c4d5e6f7g8h9i0j1",
+    "name": "Work Laptop",
+    "fingerprint": "SHA256:abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl",
+    "created_at": "2024-03-15T10:30:00.000Z"
+  }
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+<ResponseField name="400" type="error">
+  Invalid SSH public key format or maximum of 25 keys exceeded.
+</ResponseField>
+
+<ResponseField name="409" type="error">
+  This SSH key already exists in the system.
+</ResponseField>
+
+## Delete SSH Key
+
+<RequestExample>
+```bash DELETE /api/account/ssh-keys/{id}
+curl -X DELETE "https://panel.example.com/api/account/ssh-keys/clx1a2b3c4d5e6f7g8h9i0j1" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+Delete an SSH key by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the SSH key to delete.
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Always `true` if the deletion was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message.
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "success": true,
+  "message": "SSH key deleted successfully"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+<ResponseField name="400" type="error">
+  Missing SSH key ID in request.
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  SSH key not found or does not belong to the authenticated user.
+</ResponseField>

@@ -1,0 +1,216 @@
+---
+title: 'Eggs'
+description: 'Manage eggs (server type configurations)'
+---
+
+## Overview
+
+Eggs define server type configurations including Docker images, startup commands, environment variables, and installation scripts. Each egg belongs to a nest.
+
+## Endpoints
+
+### List Eggs
+
+<CodeGroup>
+```bash GET /api/admin/eggs
+curl -X GET "https://panel.example.com/api/admin/eggs" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+**Authentication**: Admin with `eggs:read` permission
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "id": "egg-uuid",
+      "name": "Vanilla Minecraft",
+      "nestName": "Minecraft"
+    },
+    {
+      "id": "egg-uuid-2",
+      "name": "Paper",
+      "nestName": "Minecraft"
+    }
+  ]
+}
+```
+
+### Get Egg
+
+<CodeGroup>
+```bash GET /api/admin/eggs/:id
+curl -X GET "https://panel.example.com/api/admin/eggs/egg-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+Returns detailed egg configuration including variables, Docker images, and scripts.
+
+### Create Egg
+
+<CodeGroup>
+```bash POST /api/admin/eggs
+curl -X POST "https://panel.example.com/api/admin/eggs" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @egg.json
+```
+</CodeGroup>
+
+**Request Body**:
+- `nestId` (required): UUID of the parent nest
+- `name` (required): Egg name (1-255 characters)
+- `description` (optional): Egg description
+- `dockerImage` (required): Default Docker image (minimum 1 character)
+- `dockerImages` (optional): Array of available Docker images
+- `startup` (required): Startup command (minimum 1 character)
+- `features` (optional): Array of feature flags
+- `fileDenylist` (optional): Array of denied file patterns
+- `configFiles` (optional): JSON string of config file mappings
+- `configStartup` (optional): JSON config for startup detection
+- `configStop` (optional): Stop command configuration
+- `configLogs` (optional): JSON config for log parsing
+- `scriptContainer` (optional): Docker image for installation script
+- `scriptEntry` (optional): Script entry point
+- `scriptInstall` (optional): Installation script content
+- `copyScriptFrom` (optional): UUID of egg to copy script from
+- `updateUrl` (optional): URL for egg updates
+
+### Update Egg
+
+<CodeGroup>
+```bash PATCH /api/admin/eggs/:id
+curl -X PATCH "https://panel.example.com/api/admin/eggs/egg-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Egg Name",
+    "dockerImage": "ghcr.io/pterodactyl/yolks:java_17"
+  }'
+```
+</CodeGroup>
+
+**Request Body**: Same as create, but all fields are optional
+
+### Delete Egg
+
+Eggs cannot be deleted if they are in use by any servers.
+
+### Export Egg
+
+<CodeGroup>
+```bash GET /api/admin/eggs/:id/export
+curl -X GET "https://panel.example.com/api/admin/eggs/egg-uuid/export" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json" \
+  -o egg-export.json
+```
+</CodeGroup>
+
+Exports the egg configuration as a JSON file for backup or sharing.
+
+### Import Egg
+
+<CodeGroup>
+```bash POST /api/admin/eggs/import
+curl -X POST "https://panel.example.com/api/admin/eggs/import" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @egg-export.json
+```
+</CodeGroup>
+
+Imports an egg from an exported JSON file.
+
+## Egg Variables
+
+Eggs can have environment variables that are configurable per-server.
+
+### List Variables
+
+<CodeGroup>
+```bash GET /api/admin/eggs/:id/variables
+curl -X GET "https://panel.example.com/api/admin/eggs/egg-uuid/variables" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Create Variable
+
+<CodeGroup>
+```bash POST /api/admin/eggs/:id/variables
+curl -X POST "https://panel.example.com/api/admin/eggs/egg-uuid/variables" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Server Port",
+    "description": "The port the server listens on",
+    "envVariable": "SERVER_PORT",
+    "defaultValue": "25565",
+    "userViewable": true,
+    "userEditable": false,
+    "rules": "required|integer|between:1,65535"
+  }'
+```
+</CodeGroup>
+
+### Update Variable
+
+<CodeGroup>
+```bash PATCH /api/admin/eggs/:eggId/variables/:varId
+curl -X PATCH "https://panel.example.com/api/admin/eggs/egg-uuid/variables/var-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "defaultValue": "25566"
+  }'
+```
+</CodeGroup>
+
+### Delete Variable
+
+<CodeGroup>
+```bash DELETE /api/admin/eggs/:eggId/variables/:varId
+curl -X DELETE "https://panel.example.com/api/admin/eggs/egg-uuid/variables/var-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Egg Object
+
+<ResponseField name="id" type="string">
+  Egg UUID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Egg name
+</ResponseField>
+
+<ResponseField name="nestName" type="string">
+  Name of the parent nest
+</ResponseField>
+
+<ResponseField name="description" type="string" nullable>
+  Egg description
+</ResponseField>
+
+<ResponseField name="dockerImage" type="string">
+  Default Docker image
+</ResponseField>
+
+<ResponseField name="startup" type="string">
+  Startup command with variable placeholders
+</ResponseField>
+
+## Notes
+
+- Eggs define the server type and configuration
+- Variables use Laravel validation rules
+- Eggs can be exported and imported for sharing
+- Installation scripts run in a separate container
+- Audit logs track all egg modifications

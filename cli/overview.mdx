@@ -1,0 +1,207 @@
+---
+title: "CLI Overview"
+description: "Command-line interface for managing XyraPanel deployments"
+icon: "terminal"
+---
+
+## Introduction
+
+The XyraPanel CLI (`xyra`) is a comprehensive command-line tool for managing your game server panel deployment. It provides streamlined workflows for building, deploying, and managing your XyraPanel instance through PM2.
+
+## Installation
+
+### Prerequisites
+
+Before installing the CLI, ensure you have:
+
+- Node.js 18 or higher
+- pnpm package manager
+- PM2 process manager (for production deployments)
+
+### Global Installation
+
+To make the `xyra` command available system-wide on your VPS:
+
+```bash
+pnpm link --global
+```
+
+After linking, you can run `xyra` from any directory.
+
+### Local Usage
+
+If you prefer not to install globally, you can run commands directly from the project root:
+
+```bash
+pnpm xyra <command>
+```
+
+## Quick Start
+
+### View Available Commands
+
+Run the CLI without arguments to see the help screen:
+
+```bash
+xyra
+```
+
+```
+██╗  ██╗ ██╗   ██╗ ██████╗  █████╗ ██████╗  █████╗ ███╗   ██╗███████╗██╗ v1.0.0
+╚██╗██╔╝ ╚██╗ ██╔╝ ██╔══██╗██╔══██╗██╔══██╗██╔══██╗████╗  ██║██╔════╝██║ by @26bz & contributors
+ ╚███╔╝   ╚████╔╝  ██████╔╝███████║██████╔╝███████║██╔██╗ ██║█████╗  ██║
+ ██╔██╗    ╚██╔╝   ██╔══██╗██╔══██║██╔═══╝ ██╔══██║██║╚██╗██║██╔══╝  ██║
+██╔╝ ██╗    ██║    ██║  ██║██║  ██║██║     ██║  ██║██║ ╚████║███████╗███████╗
+╚═╝  ╚═╝    ╚═╝    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
+──────────────────────────────────────────────────────────
+Usage
+  xyra <command> [options]
+
+Core workflows
+  deploy      • Build and reload/start via PM2
+  pm2         • Process controls (start/reload/logs)
+  build       • Nuxt build for Nitro output
+
+Nuxt & tooling
+  nuxt dev    • Nuxt dev server with HMR
+  lint        • oxlint suite (fix/type-aware)
+  fmt         • oxfmt formatters
+  test        • Vitest run/watch/coverage
+  db          • Drizzle schema helpers
+  pwa         • PWA asset generation
+
+Tip: run `pnpm link --global` to expose xyra everywhere on your VPS.
+```
+
+### Common Workflows
+
+#### Development
+
+Start the development server with hot module replacement:
+
+```bash
+xyra nuxt dev
+```
+
+#### Production Deployment
+
+Build and deploy to production in one command:
+
+```bash
+xyra deploy
+```
+
+This command will:
+1. Build the Nuxt application
+2. Attempt to reload the existing PM2 process
+3. If reload fails, start a new PM2 process
+
+#### View Logs
+
+Tail the PM2 logs for your running application:
+
+```bash
+xyra pm2 logs
+```
+
+## Command Categories
+
+The CLI organizes commands into logical groups:
+
+### Core Workflows
+
+<CardGroup cols={2}>
+  <Card title="deploy" icon="rocket" href="/cli/commands#deploy">
+    Build and deploy your application via PM2
+  </Card>
+  <Card title="pm2" icon="gears" href="/cli/commands#pm2">
+    Manage PM2 processes (start, stop, reload, logs)
+  </Card>
+  <Card title="build" icon="hammer" href="/cli/commands#build">
+    Build the Nuxt application for production
+  </Card>
+</CardGroup>
+
+### Development Tools
+
+<CardGroup cols={2}>
+  <Card title="nuxt" icon="n" href="/cli/commands#nuxt">
+    Nuxt runtime helpers (dev, preview, generate)
+  </Card>
+  <Card title="lint" icon="broom" href="/cli/commands#lint">
+    Code linting with oxlint
+  </Card>
+  <Card title="fmt" icon="paintbrush" href="/cli/commands#fmt">
+    Code formatting with oxfmt
+  </Card>
+  <Card title="test" icon="flask" href="/cli/commands#test">
+    Run tests with Vitest
+  </Card>
+</CardGroup>
+
+### Database & Assets
+
+<CardGroup cols={2}>
+  <Card title="db" icon="database" href="/cli/commands#db">
+    Database schema migrations with Drizzle
+  </Card>
+  <Card title="pwa" icon="mobile" href="/cli/commands#pwa">
+    Generate PWA assets
+  </Card>
+</CardGroup>
+
+## Configuration
+
+### PM2 Ecosystem File
+
+Most PM2-related commands reference an ecosystem configuration file. By default, the CLI looks for `ecosystem.config.cjs` in your project root.
+
+Example ecosystem file:
+
+```javascript ecosystem.config.cjs
+module.exports = {
+  apps: [{
+    name: 'xyrapanel',
+    script: './.output/server/index.mjs',
+    cwd: '/path/to/xyrapanel',
+    instances: 1,
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    },
+    env_staging: {
+      NODE_ENV: 'staging',
+      PORT: 3001
+    }
+  }]
+};
+```
+
+### Environment Blocks
+
+The CLI supports different PM2 environment blocks for various deployment stages:
+
+- `env` - Default production environment
+- `env_staging` - Staging environment
+
+Specify the environment using the `--env` flag:
+
+```bash
+xyra deploy --env env_staging
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Command Reference" icon="book" href="/cli/commands">
+    Complete reference for all CLI commands
+  </Card>
+  <Card title="Deployment Guide" icon="server" href="/deployment">
+    Learn about deploying XyraPanel to production
+  </Card>
+</CardGroup>
+
+<Note>
+  The CLI uses **citty** for command parsing and **consola** for beautiful terminal output.
+</Note>

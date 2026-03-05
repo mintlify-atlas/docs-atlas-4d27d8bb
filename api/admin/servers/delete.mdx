@@ -1,0 +1,83 @@
+---
+title: 'Delete Server'
+api: 'DELETE /api/admin/servers/:id'
+description: 'Delete a server from both Wings and the panel'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `servers:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Server ID or UUID
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="force" type="boolean" default="false">
+  Force delete from panel even if Wings deletion fails. Accepts "true" or "1".
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="Success Object">
+    <ResponseField name="success" type="boolean">
+      Whether the deletion was successful
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://panel.example.com/api/admin/servers/a1b2c3d4" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+```bash Force Delete
+curl -X DELETE "https://panel.example.com/api/admin/servers/a1b2c3d4?force=true" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "success": true,
+    "message": "Server deleted successfully"
+  }
+}
+```
+</ResponseExample>
+
+## Deletion Process
+
+1. **Without force**: Server is deleted from Wings first, then from the panel database
+2. **With force**: Server is deleted from the panel database even if Wings deletion fails
+
+## What Gets Deleted
+
+- Server record
+- Server limits
+- All allocations (freed for reuse)
+- Environment variables
+- Schedules
+- Databases
+- Subusers
+- Backups
+- Mount associations
+
+## Error Handling
+
+- **409 Conflict**: Wings deletion failed and `force` was not specified
+- **404 Not Found**: Server doesn't exist (treated as success if `force=true`)
+- If the node is offline, use `force=true` to delete from the panel

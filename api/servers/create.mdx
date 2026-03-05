@@ -1,0 +1,52 @@
+---
+title: 'Create Server'
+description: 'Create a new server (Admin only)'
+---
+
+<Warning>
+  Server creation through the client API is not available. This operation is restricted to the admin API.
+</Warning>
+
+## Admin API Alternative
+
+To create a server, you must use the admin API endpoint:
+
+```
+POST /api/admin/servers
+```
+
+The admin API allows you to:
+- Create new servers with custom configurations
+- Assign servers to specific nodes
+- Set resource limits and allocations
+- Configure startup parameters and Docker images
+- Assign ownership to users
+
+Refer to the [Admin API documentation](/api/admin/servers/create) for details on server creation.
+
+## Why is creation restricted?
+
+Server creation requires:
+- Administrative privileges to allocate system resources
+- Access to node management and allocation assignment
+- Configuration of limits, eggs (server types), and Docker containers
+- User assignment and permission setup
+
+These operations are security-sensitive and require admin-level access to prevent resource abuse and ensure proper configuration.
+
+## Alternative: Request Server Creation
+
+If you're a regular user and need a new server:
+
+1. Contact your XyraPanel administrator
+2. Use any server request system your organization has implemented
+3. If self-service is enabled, use the panel's UI to request a server
+
+## Self-Service Server Creation
+
+Some XyraPanel installations may implement self-service server creation through:
+- Custom frontend forms that call the admin API with appropriate authorization
+- Integration with billing systems
+- Automated provisioning workflows
+
+Check with your administrator to see if self-service options are available in your installation.

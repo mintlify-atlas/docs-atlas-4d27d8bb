@@ -1,0 +1,58 @@
+---
+title: 'Delete Node'
+api: 'DELETE /api/admin/nodes/:id'
+description: 'Delete a Wings node'
+---
+
+<Note>
+Node deletion is typically done through the Wings-specific endpoints. This documentation is provided for reference.
+</Note>
+
+## Authentication
+
+This endpoint requires admin authentication and the `nodes:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Node ID
+</ParamField>
+
+## Restrictions
+
+- Cannot delete a node that has active servers
+- All servers must be deleted or transferred to another node first
+- Allocations on the node will also be deleted
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="Success Object">
+    <ResponseField name="success" type="boolean">
+      Whether the deletion was successful
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://panel.example.com/api/admin/nodes/node-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "success": true,
+    "message": "Node deleted successfully"
+  }
+}
+```
+</ResponseExample>

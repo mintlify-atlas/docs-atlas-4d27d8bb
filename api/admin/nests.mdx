@@ -1,0 +1,158 @@
+---
+title: 'Nests'
+description: 'Manage nests (game/software categories) and their eggs'
+---
+
+## Overview
+
+Nests are categories that group related eggs (server types). For example, a "Minecraft" nest might contain eggs for Vanilla, Spigot, Paper, etc.
+
+## Endpoints
+
+### List Nests
+
+<CodeGroup>
+```bash GET /api/admin/nests
+curl -X GET "https://panel.example.com/api/admin/nests" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+```bash GET /api/admin/nests?view=options
+curl -X GET "https://panel.example.com/api/admin/nests?view=options" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+**Authentication**: Admin with `nests:read` permission
+
+**Query Parameters**:
+- `view` (optional): Set to `options` for a simplified list of ID and name only
+
+**Response (default)**:
+```json
+{
+  "data": [
+    {
+      "id": "nest-uuid",
+      "uuid": "nest-uuid",
+      "author": "support@pterodactyl.io",
+      "name": "Minecraft",
+      "description": "Minecraft servers",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z",
+      "eggCount": 12
+    }
+  ]
+}
+```
+
+**Response (view=options)**:
+```json
+{
+  "data": [
+    {
+      "id": "nest-uuid",
+      "name": "Minecraft"
+    }
+  ]
+}
+```
+
+### Get Nest
+
+<CodeGroup>
+```bash GET /api/admin/nests/:id
+curl -X GET "https://panel.example.com/api/admin/nests/nest-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+### Create Nest
+
+<CodeGroup>
+```bash POST /api/admin/nests
+curl -X POST "https://panel.example.com/api/admin/nests" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Custom Games",
+    "description": "Custom game server nest",
+    "author": "admin@example.com"
+  }'
+```
+</CodeGroup>
+
+**Request Body**:
+- `name` (required): Nest name (1-255 characters, trimmed)
+- `description` (optional): Description (max 500 characters, trimmed)
+- `author` (required): Author identifier (minimum 1 character, trimmed)
+
+### Update Nest
+
+<CodeGroup>
+```bash PATCH /api/admin/nests/:id
+curl -X PATCH "https://panel.example.com/api/admin/nests/nest-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated description"
+  }'
+```
+</CodeGroup>
+
+**Request Body**: Same as create, but all fields are optional
+
+### Delete Nest
+
+<CodeGroup>
+```bash DELETE /api/admin/nests/:id
+curl -X DELETE "https://panel.example.com/api/admin/nests/nest-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+**Restrictions**: Cannot delete a nest that contains eggs
+
+## Nest Object
+
+<ResponseField name="id" type="string">
+  Nest UUID
+</ResponseField>
+
+<ResponseField name="uuid" type="string">
+  Nest UUID
+</ResponseField>
+
+<ResponseField name="author" type="string">
+  Author email or identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nest name
+</ResponseField>
+
+<ResponseField name="description" type="string" nullable>
+  Nest description
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="eggCount" type="integer">
+  Number of eggs in this nest (only in list endpoint)
+</ResponseField>
+
+## Notes
+
+- Nests are ordered alphabetically by name
+- The `eggCount` is computed via SQL join in the list endpoint
+- Use `view=options` for dropdown/select inputs in UIs
+- Audit logs are created for all nest operations

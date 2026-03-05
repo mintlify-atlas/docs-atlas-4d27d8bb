@@ -1,0 +1,361 @@
+---
+title: Features
+description: Comprehensive overview of XyraPanel's capabilities and features
+---
+
+# Features
+
+XyraPanel provides a complete game server management solution with enterprise-grade features. Explore what makes XyraPanel powerful and flexible.
+
+## Server Management
+
+### Console & Command Execution
+
+Interact with your game servers through a real-time web console powered by xterm.js:
+
+- **Live Console**: Real-time server output with ANSI color support
+- **Command History**: Navigate previous commands with arrow keys
+- **Search**: Find specific log entries quickly
+- **Copy/Paste**: Full clipboard integration
+
+<Info>
+  The console uses WebSocket connections for low-latency communication with Wings nodes.
+</Info>
+
+### File Management
+
+Complete file system access with an intuitive web interface:
+
+<CardGroup cols={2}>
+  <Card title="File Browser" icon="folder">
+    Navigate directories, view file sizes, and manage permissions
+  </Card>
+  <Card title="Code Editor" icon="code">
+    Monaco editor with syntax highlighting for common file types
+  </Card>
+  <Card title="File Operations" icon="file">
+    Upload, download, compress, decompress, and archive files
+  </Card>
+  <Card title="Bulk Actions" icon="list">
+    Copy, move, delete, and chmod multiple files at once
+  </Card>
+</CardGroup>
+
+Supported operations:
+- Create, rename, move, and delete files/directories
+- Upload files up to 20MB (configurable)
+- Download individual files or compressed archives
+- Compress to .tar.gz, .zip formats
+- Decompress archives
+- Pull files from remote URLs
+- Change file permissions (chmod)
+
+### Database Management
+
+Create and manage MySQL/MariaDB databases for your game servers:
+
+- **One-Click Creation**: Deploy databases from the panel
+- **Password Rotation**: Regenerate database passwords securely
+- **Host Management**: Configure multiple database hosts
+- **Connection Details**: Easy access to connection strings
+
+### Backup System
+
+Protect your server data with automated backups:
+
+- **Manual Backups**: Create backups on demand
+- **Scheduled Backups**: Automate backup creation via schedules
+- **Compression**: Efficient storage with gzip compression
+- **Restore**: One-click restoration from backups
+- **Download**: Export backups for local storage
+- **Retention**: Automatic cleanup of old backups
+
+<Note>
+  Backup configuration is managed in `nuxt.config.ts` under scheduled tasks:
+  ```typescript
+  scheduledTasks: {
+    '0 2 * * *': ['maintenance:prune-backups'],
+  }
+  ```
+</Note>
+
+### Task Scheduling
+
+Automate server operations with cron-like schedules:
+
+- **Flexible Timing**: Use cron expressions or simple intervals
+- **Multiple Tasks**: Chain multiple actions in sequence
+- **Task Types**:
+  - Send console commands
+  - Create backups
+  - Restart server
+  - Power actions (start/stop/kill)
+- **Run Now**: Execute schedules manually for testing
+
+## User Management
+
+### Authentication & Authorization
+
+Robust authentication system built on Better Auth:
+
+<CardGroup cols={2}>
+  <Card title="Two-Factor Authentication" icon="lock">
+    TOTP-based 2FA with QR code setup and recovery codes
+  </Card>
+  <Card title="Session Management" icon="clock">
+    View and revoke active sessions with device information
+  </Card>
+  <Card title="API Keys" icon="key">
+    Generate API keys for programmatic access with custom permissions
+  </Card>
+  <Card title="SSH Keys" icon="terminal">
+    Manage SSH keys for SFTP access to server files
+  </Card>
+</CardGroup>
+
+### Role-Based Access Control
+
+Granular permissions system:
+
+- **Root Admin**: Full system access
+- **User Roles**: Customizable role assignments
+- **Server Permissions**: Control access to specific servers
+- **Sub-Users**: Grant limited access to other users
+
+### Account Security
+
+- **Password Policies**: Enforced password requirements
+- **Password Reset**: Secure email-based password recovery
+- **Force Password Change**: Require users to update passwords
+- **Account Suspension**: Temporarily disable user accounts
+- **Ban System**: Permanently ban users with optional expiration
+
+## Node Management
+
+### Wings Integration
+
+XyraPanel works seamlessly with Pterodactyl Wings for server deployment:
+
+- **Multi-Node Support**: Deploy servers across multiple Wings nodes
+- **Automatic Discovery**: Wings reports server stats automatically
+- **Resource Allocation**: CPU, memory, and disk limits per server
+- **Overallocation**: Configure resource overselling ratios
+- **Location Grouping**: Organize nodes by geographic location
+
+From `server/database/schema.ts`:
+```typescript
+export const wingsNodes = pgTable('wings_nodes', {
+  id: text('id').primaryKey(),
+  uuid: text('uuid').notNull(),
+  name: text('name').notNull(),
+  fqdn: text('fqdn').notNull(),
+  scheme: text('scheme', { enum: ['http', 'https'] }).notNull(),
+  memory: integer('memory').notNull(),
+  memoryOverallocate: integer('memory_overallocate').notNull().default(0),
+  disk: integer('disk').notNull(),
+  diskOverallocate: integer('disk_overallocate').notNull().default(0),
+  // ...
+});
+```
+
+### Node Configuration
+
+- **SSL/TLS Support**: Secure connections to Wings daemons
+- **Behind Proxy**: Support for reverse proxy configurations
+- **Maintenance Mode**: Temporarily disable node without deleting servers
+- **Custom Ports**: Configure SFTP and daemon ports
+- **Upload Size Limits**: Set maximum file upload sizes per node
+
+## Security Features
+
+### Rate Limiting
+
+Protect your panel from abuse with configurable rate limits:
+
+<Info>
+  XyraPanel includes intelligent rate limiting per endpoint. Authentication endpoints are heavily restricted:
+  ```typescript
+  '/api/auth/sign-in/**': {
+    security: {
+      rateLimiter: {
+        tokensPerInterval: 5,
+        interval: 600000, // 10 minutes
+        throwError: true,
+      },
+    },
+  }
+  ```
+</Info>
+
+- **Redis Backend**: Distributed rate limiting across instances
+- **Per-Endpoint Limits**: Different limits for different API routes
+- **IP-Based**: Rate limits applied per IP address
+- **Configurable**: Adjust tokens and intervals via environment variables
+
+### Content Security Policy
+
+Strict CSP headers to prevent XSS attacks:
+
+- **Nonce-Based Scripts**: All scripts require valid nonces
+- **Strict Dynamic**: Modern CSP with script-src 'strict-dynamic'
+- **Report-Only Mode**: Test CSP before enforcement
+- **Custom Reporting**: Send violations to monitoring services
+
+### Request Validation
+
+- **Size Limits**: Prevent large payload attacks (configurable 4-20MB)
+- **XSS Protection**: Automatic sanitization of user input
+- **CSRF Protection**: Token-based CSRF prevention
+- **CORS Configuration**: Restrict cross-origin requests
+
+## Administrative Features
+
+### System Dashboard
+
+Comprehensive overview of your panel:
+
+- **Server Statistics**: Total servers, active/inactive counts
+- **Resource Usage**: Aggregate CPU, memory, disk across all nodes
+- **User Activity**: Recent logins and actions
+- **Node Health**: Real-time status of all Wings nodes
+
+### Egg Management
+
+Manage server configurations (eggs) for different game types:
+
+- **Import Eggs**: Import from Pterodactyl repositories
+- **Custom Variables**: Define startup parameters and environment variables
+- **Docker Images**: Configure container images
+- **Nest Organization**: Group related eggs together
+
+### Activity Logging
+
+Complete audit trail of all panel actions:
+
+- **User Actions**: Track every user operation
+- **API Requests**: Log all API calls with parameters
+- **Server Events**: Monitor server state changes
+- **Admin Actions**: Audit administrative operations
+- **Retention Policy**: Automatic pruning via scheduled task:
+  ```typescript
+  '0 2 * * *': ['maintenance:prune-audit-logs'],
+  ```
+
+### Settings Management
+
+<CardGroup cols={2}>
+  <Card title="General Settings" icon="gear">
+    Panel name, description, and branding
+  </Card>
+  <Card title="Email Configuration" icon="envelope">
+    SMTP settings for transactional emails
+  </Card>
+  <Card title="Security Options" icon="shield">
+    Captcha, rate limiting, and security policies
+  </Card>
+  <Card title="Email Templates" icon="file-text">
+    Customize email notifications
+  </Card>
+</CardGroup>
+
+## Developer Features
+
+### API Access
+
+Programmatic access to all panel functionality:
+
+- **RESTful API**: Well-structured REST endpoints
+- **API Key Authentication**: Secure token-based access
+- **Comprehensive Coverage**: Manage servers, users, nodes, and more
+- **Type-Safe**: TypeScript definitions for all endpoints
+
+### CLI Tool
+
+XyraPanel includes a command-line interface for common tasks:
+
+```bash
+xyra deploy    # Build and reload via PM2
+xyra pm2       # Process controls (start/reload/logs)
+xyra build     # Nuxt build for production
+```
+
+### Internationalization
+
+Built-in multi-language support:
+
+- **i18n Integration**: Full internationalization with @nuxtjs/i18n
+- **Translation Management**: Crowdin integration for community translations
+- **Language Detection**: Automatic browser language detection
+- **RTL Support**: Right-to-left language support
+
+From `nuxt.config.ts`:
+```typescript
+i18n: {
+  strategy: 'prefix_except_default',
+  defaultLocale: 'en',
+  locales: [
+    {
+      code: 'en',
+      name: 'English',
+      language: 'en',
+      dir: 'ltr',
+      file: 'en.json',
+    },
+  ],
+  detectBrowserLanguage: {
+    useCookie: true,
+    redirectOn: 'root',
+    fallbackLocale: 'en',
+  },
+}
+```
+
+## Performance Features
+
+### Caching Strategy
+
+Intelligent caching for optimal performance:
+
+- **Redis Cache**: Shared cache across multiple panel instances
+- **HTTP Caching**: Configurable cache headers for API responses
+- **Dashboard Caching**: 10-second cache with 30-second stale-while-revalidate
+- **Admin Caching**: Separate cache configuration for admin endpoints
+
+### Build Optimization
+
+- **Code Splitting**: Automatic chunking for faster load times
+- **Tree Shaking**: Remove unused code from bundles
+- **CSS Optimization**: Lightning CSS for fast stylesheet processing
+- **PWA**: Progressive Web App support with service workers
+
+### Monitoring
+
+Built-in monitoring and maintenance tasks:
+
+```typescript
+scheduledTasks: {
+  '*/2 * * * *': ['monitoring:collect-resources'],
+  '0 * * * *': ['maintenance:prune-rate-limits'],
+}
+```
+
+## Coming Soon
+
+<Warning>
+  These features are planned but not yet implemented in the alpha release:
+</Warning>
+
+- **Server Transfers**: Move servers between nodes
+- **Mount System**: Shared directories across servers
+- **Advanced Monitoring**: Grafana integration
+- **Plugin System**: Extend panel functionality
+- **Mobile App**: Native mobile applications
+- **Marketplace**: Share and download server configurations
+
+## Next Steps
+
+Learn more about how XyraPanel works:
+
+- [Architecture](/architecture) - Technical architecture overview
+- [Installation](/getting-started/installation) - Set up your own instance
+- [Configuration](/configuration/environment-variables) - Configure XyraPanel settings

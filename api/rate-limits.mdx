@@ -1,0 +1,284 @@
+---
+title: 'Rate Limits'
+description: 'Understand XyraPanel API rate limiting, configuration, and response headers'
+icon: 'gauge-high'
+---
+
+## Overview
+
+XyraPanel implements comprehensive rate limiting to protect the API from abuse and ensure fair resource allocation. Rate limits are enforced at both the global and per-endpoint levels.
+
+## Rate Limit Configuration
+
+Rate limiting is configured in `nuxt.config.ts` and can be customized via environment variables.
+
+### Global Rate Limits
+
+By default, all API endpoints have a global rate limit:
+
+```bash .env.example
+NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"           # or "lruCache"
+NUXT_SECURITY_RATE_LIMIT_TOKENS="150"            # requests per interval
+NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="300000"    # 5 minutes (300,000 ms)
+```
+
+**Default:** 150 requests per 5 minutes
+
+### Rate Limit Drivers
+
+XyraPanel supports two rate limit storage drivers:
+
+#### Redis (Recommended for Production)
+
+```bash
+NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+REDIS_HOST="redis"
+REDIS_PORT="6379"
+REDIS_PASSWORD="your-password"
+REDIS_TLS="false"
+```
+
+Benefits:
+- Distributed rate limiting across multiple instances
+- Persistent storage
+- Better performance at scale
+
+#### LRU Cache (Development)
+
+```bash
+NUXT_SECURITY_RATE_LIMIT_DRIVER="lruCache"
+```
+
+Benefits:
+- No external dependencies
+- Simple setup for development
+- In-memory storage
+
+## Per-Endpoint Rate Limits
+
+Specific endpoints have custom rate limits configured in `nuxt.config.ts`:
+
+### Authentication Endpoints
+
+| Endpoint | Limit | Interval | Notes |
+|----------|-------|----------|-------|
+| `/api/auth/**` | 45 requests | 5 minutes | General auth operations |
+| `/api/auth/sign-in/**` | 5 requests | 10 minutes | Login attempts |
+| `/api/auth/forget-password` | 5 requests | 15 minutes | Password reset requests |
+| `/api/auth/reset-password` | 8 requests | 15 minutes | Password reset confirmations |
+| `/api/auth/password/request` | 5 requests | 15 minutes | New password request flow |
+| `/api/auth/password/reset` | 8 requests | 15 minutes | Password reset flow |
+
+### Account Management
+
+| Endpoint | Limit | Interval | Notes |
+|----------|-------|----------|-------|
+| `/api/user/2fa/**` | 8 requests | 5 minutes | Two-factor authentication |
+| `/api/account/password/**` | 8 requests | 5 minutes | Password changes |
+| `/api/account/email` | 8 requests | 5 minutes | Email updates |
+| `/api/account/sessions/**` | 15 requests | 5 minutes | Session management |
+| `/api/account/api-keys/**` | 20 requests | 5 minutes | API key management |
+
+### Server & Admin API
+
+| Endpoint | Limit | Interval | Notes |
+|----------|-------|----------|-------|
+| `/api/admin/**` | 300 requests | 1 minute | Admin operations |
+| `/api/wings/**` | 300 requests | 1 minute | Wings node communication |
+| `/api/servers/**` | 300 requests | 1 minute | Server management |
+| `/api/client/**` | 300 requests | 1 minute | Client API operations |
+
+## Rate Limit Headers
+
+When rate limiting is enabled (`headers: true`), XyraPanel includes rate limit information in response headers:
+
+```http
+X-RateLimit-Limit: 150
+X-RateLimit-Remaining: 142
+X-RateLimit-Reset: 1678901234
+```
+
+### Header Descriptions
+
+- **`X-RateLimit-Limit`** - Maximum number of requests allowed in the interval
+- **`X-RateLimit-Remaining`** - Number of requests remaining in the current interval
+- **`X-RateLimit-Reset`** - Unix timestamp when the rate limit resets
+
+## Rate Limit Exceeded Response
+
+When you exceed the rate limit, you'll receive a `429 Too Many Requests` error:
+
+```json
+{
+  "statusCode": 429,
+  "message": "Rate limit exceeded. Please try again later."
+}
+```
+
+The response includes the standard rate limit headers showing when you can retry.
+
+## Example: Checking Rate Limits
+
+```bash
+curl -i -X GET https://panel.example.com/api/client/servers \
+  -H "Authorization: Bearer your_api_key_here"
+```
+
+Response headers:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-RateLimit-Limit: 300
+X-RateLimit-Remaining: 287
+X-RateLimit-Reset: 1678901234
+```
+
+## Handling Rate Limits in Your Application
+
+### Respect Rate Limit Headers
+
+```javascript
+const response = await fetch('https://panel.example.com/api/client/servers', {
+  headers: {
+    'Authorization': 'Bearer your_api_key_here'
+  }
+});
+
+const remaining = response.headers.get('X-RateLimit-Remaining');
+const resetTime = response.headers.get('X-RateLimit-Reset');
+
+if (remaining === '0') {
+  const waitTime = (resetTime * 1000) - Date.now();
+  console.log(`Rate limit reached. Wait ${waitTime}ms before next request`);
+}
+```
+
+### Implement Exponential Backoff
+
+```javascript
+async function apiRequestWithBackoff(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(url, options);
+    
+    if (response.status === 429) {
+      const resetTime = response.headers.get('X-RateLimit-Reset');
+      const waitTime = Math.min(
+        (resetTime * 1000) - Date.now(),
+        Math.pow(2, i) * 1000 // Exponential backoff
+      );
+      
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      continue;
+    }
+    
+    return response;
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
+
+## Production Configuration
+
+For production deployments, configure Redis-based rate limiting:
+
+```typescript nuxt.config.ts
+const globalRateLimiterDriver = shouldUseRedisRateLimiter
+  ? {
+      name: 'redis',
+      options: {
+        host: process.env.REDIS_HOST || 'redis',
+        port: parseInt(process.env.REDIS_PORT) || 6379,
+        password: process.env.REDIS_PASSWORD,
+        ...(process.env.REDIS_TLS === 'true' ? { tls: {} } : {}),
+      },
+    }
+  : {
+      name: 'lruCache',
+    };
+```
+
+## Rate Limit Customization
+
+You can customize rate limits by modifying `nuxt.config.ts`:
+
+```typescript
+routeRules: {
+  '/api/custom-endpoint/**': {
+    security: {
+      rateLimiter: {
+        tokensPerInterval: 100,    // Max requests
+        interval: 60000,           // 1 minute in ms
+        throwError: true,          // Throw 429 error
+      },
+    },
+  },
+}
+```
+
+## Better Auth Rate Limiting
+
+Better Auth provides additional rate limiting for authentication operations:
+
+```typescript server/utils/auth.ts
+rateLimit: {
+  enabled: true,
+  window: 60,                    // 60 seconds
+  max: 100,                      // 100 requests per window
+  storage: 'database',           // Store in PostgreSQL
+  customRules: {
+    '/sign-in/email': {
+      window: 10,
+      max: 3,
+    },
+    '/api-key/create': {
+      window: 60,
+      max: 10,
+    },
+  },
+}
+```
+
+## Monitoring Rate Limits
+
+XyraPanel includes scheduled tasks to maintain rate limit data:
+
+```typescript
+scheduledTasks: {
+  '0 * * * *': ['maintenance:prune-rate-limits'],  // Hourly cleanup
+}
+```
+
+This task automatically removes expired rate limit entries from the database or Redis.
+
+## Best Practices
+
+<Tip>
+  - **Cache responses** where appropriate to reduce API calls
+  - **Batch requests** when possible instead of making individual calls
+  - **Monitor headers** to track your usage and avoid hitting limits
+  - **Implement retry logic** with exponential backoff for 429 errors
+  - **Use webhooks** for real-time updates instead of polling
+  - **Distribute load** across multiple API keys if necessary
+</Tip>
+
+<Warning>
+  Repeatedly hitting rate limits may result in temporary IP blocks or account suspension. Contact your administrator if you need higher limits for legitimate use cases.
+</Warning>
+
+## Disabling Rate Limits (Development Only)
+
+In development, rate limiting can be disabled:
+
+```typescript nuxt.config.ts
+security: isDev ? {
+  rateLimiter: false,
+} : {
+  // Production rate limiting config
+}
+```
+
+<Warning>
+  Never disable rate limiting in production environments.
+</Warning>

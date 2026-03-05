@@ -1,0 +1,100 @@
+---
+title: 'Server Actions'
+api: 'POST /api/admin/servers/:id/actions'
+description: 'Perform power and management actions on a server'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `servers:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Server ID or UUID
+</ParamField>
+
+## Request Body
+
+<ParamField body="action" type="string" required>
+  Action to perform. One of:
+  - `start` - Start the server
+  - `stop` - Stop the server gracefully
+  - `restart` - Restart the server
+  - `kill` - Force kill the server process
+  - `suspend` - Suspend the server
+  - `unsuspend` - Unsuspend the server
+  - `reinstall` - Reinstall the server
+  - `delete` - Delete the server
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="Success Object">
+    <ResponseField name="success" type="boolean">
+      Whether the action was successful
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message indicating the action completed
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash Start Server
+curl -X POST "https://panel.example.com/api/admin/servers/a1b2c3d4/actions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"action": "start"}'
+```
+
+```bash Restart Server
+curl -X POST "https://panel.example.com/api/admin/servers/a1b2c3d4/actions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"action": "restart"}'
+```
+
+```bash Suspend Server
+curl -X POST "https://panel.example.com/api/admin/servers/a1b2c3d4/actions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"action": "suspend"}'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "success": true,
+    "message": "Server start action completed successfully"
+  }
+}
+```
+</ResponseExample>
+
+## Action Details
+
+### Power Actions
+- **start**: Starts the server if it's stopped
+- **stop**: Sends a graceful shutdown signal
+- **restart**: Stops and then starts the server
+- **kill**: Force terminates the server process (use with caution)
+
+### Management Actions
+- **suspend**: Prevents the server from starting and stops it if running
+- **unsuspend**: Removes suspension and allows the server to start
+- **reinstall**: Triggers a fresh installation of the server
+- **delete**: Deletes the server entirely
+
+## Error Responses
+
+- **403 Forbidden**: Wings authentication failed
+- **503 Service Unavailable**: Wings daemon is unavailable
+- **500 Internal Server Error**: Action failed for other reasons

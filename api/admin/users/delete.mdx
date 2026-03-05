@@ -1,0 +1,87 @@
+---
+title: 'Delete User'
+api: 'DELETE /api/admin/users/:id'
+description: 'Delete a user account'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `users:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  User UUID
+</ParamField>
+
+## Restrictions
+
+- Cannot delete your own account
+- Cannot delete a user that owns servers
+- All servers must be deleted or transferred to another user first
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="Success Object">
+    <ResponseField name="success" type="boolean">
+      Whether the deletion was successful
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message
+    </ResponseField>
+    
+    <ResponseField name="userId" type="string">
+      UUID of the deleted user
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://panel.example.com/api/admin/users/user-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "success": true,
+    "message": "User deleted successfully",
+    "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }
+}
+```
+</ResponseExample>
+
+## Error Responses
+
+- **400 Bad Request**: User ID is required
+- **400 Bad Request**: Cannot delete your own account
+- **400 Bad Request**: User owns servers (includes server count)
+- **404 Not Found**: User not found
+
+## Pre-Deletion Checks
+
+1. Verifies the user exists
+2. Checks if the user is the current admin (prevents self-deletion)
+3. Counts servers owned by the user
+4. Blocks deletion if user owns any servers
+
+## What Gets Deleted
+
+- User account record
+- Associated authentication accounts
+- User sessions
+- API keys
+- Other user-specific data
+
+## Notes
+
+- User deletion is permanent and cannot be undone
+- To delete a user that owns servers, first transfer or delete those servers
+- Subuser permissions and access to other users' servers are removed

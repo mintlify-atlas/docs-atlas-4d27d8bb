@@ -1,0 +1,242 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate with the XyraPanel API using API keys and sessions'
+icon: 'key'
+---
+
+## Authentication Methods
+
+XyraPanel supports two primary authentication methods:
+
+1. **API Keys** - For programmatic access and automation
+2. **Session Cookies** - For browser-based applications and web interfaces
+
+## API Key Authentication
+
+API keys provide secure, long-lived authentication tokens for automated access to the XyraPanel API.
+
+### Creating an API Key
+
+API keys can be created through the XyraPanel web interface:
+
+1. Navigate to **Account Settings** → **API Keys**
+2. Click **Create API Key**
+3. Set an expiration date (max 90 days, default 90 days)
+4. Copy your API key immediately - it will only be shown once
+
+### Using API Keys
+
+API keys can be provided in two ways:
+
+#### Bearer Token (Recommended)
+
+```bash
+curl -X GET https://panel.example.com/api/client/servers \
+  -H "Authorization: Bearer your_api_key_here" \
+  -H "Content-Type: application/json"
+```
+
+#### Custom Header
+
+```bash
+curl -X GET https://panel.example.com/api/client/servers \
+  -H "x-api-key: your_api_key_here" \
+  -H "Content-Type: application/json"
+```
+
+### API Key Configuration
+
+API keys are configured in `server/utils/auth.ts`:
+
+```typescript
+apiKey({
+  apiKeyHeaders: ['x-api-key'],
+  customAPIKeyGetter: (ctx) => {
+    // Supports both Bearer and x-api-key headers
+    const bearerHeader = ctx.headers?.get('authorization');
+    if (bearerHeader?.startsWith('Bearer ')) {
+      return bearerHeader.slice(7).trim();
+    }
+    return ctx.headers?.get('x-api-key') || null;
+  },
+  enableSessionForAPIKeys: true,
+  disableKeyHashing: false,
+  defaultKeyLength: 32,
+  keyExpiration: {
+    defaultExpiresIn: 60 * 60 * 24 * 90, // 90 days
+    minExpiresIn: 1,
+    maxExpiresIn: 90,
+  },
+})
+```
+
+### API Key Properties
+
+- **Length**: 32 characters (default)
+- **Storage**: Hashed in database using bcrypt
+- **Expiration**: 90 days (default), configurable between 1-90 days
+- **Permissions**: Inherits user permissions
+- **Revocation**: Can be deleted at any time via the API or web interface
+
+### Security Best Practices
+
+<Warning>
+  - Store API keys securely in environment variables or secret managers
+  - Never commit API keys to version control
+  - Rotate API keys regularly (every 30-90 days)
+  - Use separate API keys for different applications
+  - Delete unused or compromised API keys immediately
+</Warning>
+
+## Session Cookie Authentication
+
+Session cookies are automatically set when you log in through the web interface. These are ideal for browser-based applications.
+
+### Session Configuration
+
+Sessions are configured via Better Auth:
+
+```typescript
+session: {
+  expiresIn: 14 * 24 * 60 * 60,        // 14 days
+  updateAge: 12 * 60 * 60,              // Update every 12 hours
+  freshAge: 5 * 60,                      // Fresh for 5 minutes
+  cookieCache: {
+    enabled: true,
+    maxAge: 5 * 60,
+    strategy: 'compact',
+  },
+}
+```
+
+### Session Features
+
+- **Multi-Session**: Up to 5 concurrent sessions per user
+- **Auto-Renewal**: Sessions refresh automatically
+- **Secure Cookies**: HttpOnly, Secure (in production), SameSite=Lax
+- **Session Management**: View and revoke active sessions
+
+### Cookie Attributes
+
+```typescript
+defaultCookieAttributes: {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: 'lax',
+}
+```
+
+## Authentication Headers
+
+When using API keys or sessions, all authenticated requests should include:
+
+```bash
+Authorization: Bearer your_api_key_here
+Content-Type: application/json
+```
+
+## Authentication Errors
+
+### 401 Unauthorized
+
+```json
+{
+  "statusCode": 401,
+  "message": "Authentication required"
+}
+```
+
+**Causes:**
+- Missing or invalid API key
+- Expired API key
+- Missing or expired session
+
+### 401 API Key Required
+
+```json
+{
+  "statusCode": 401,
+  "message": "API key authentication required. Provide a valid API key via Authorization: Bearer <key> or x-api-key header."
+}
+```
+
+**Causes:**
+- Endpoint requires API key authentication specifically
+- Session cookies are not accepted for this endpoint
+
+## Example: Complete API Request
+
+```bash
+curl -X GET https://panel.example.com/api/client/servers \
+  -H "Authorization: Bearer xyra_k3y_1234567890abcdef" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json"
+```
+
+## Example: Creating a Server
+
+```bash
+curl -X POST https://panel.example.com/api/admin/servers \
+  -H "Authorization: Bearer xyra_k3y_1234567890abcdef" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Minecraft Server",
+    "node_id": "node-uuid",
+    "egg_id": "egg-uuid",
+    "memory": 2048,
+    "disk": 10240,
+    "cpu": 100
+  }'
+```
+
+## Managing API Keys Programmatically
+
+### List Your API Keys
+
+```bash
+curl -X GET https://panel.example.com/api/account/api-keys \
+  -H "Authorization: Bearer your_api_key_here"
+```
+
+### Delete an API Key
+
+```bash
+curl -X DELETE https://panel.example.com/api/account/api-keys/{identifier} \
+  -H "Authorization: Bearer your_api_key_here"
+```
+
+## Environment Variables
+
+Authentication is configured via environment variables:
+
+```bash .env.example
+# Authentication Secret (required in production)
+BETTER_AUTH_SECRET="your-32-character-secret-here"
+
+# Application URL
+BETTER_AUTH_URL=https://panel.example.com
+NUXT_PUBLIC_APP_URL=https://panel.example.com
+
+# Trusted Origins
+BETTER_AUTH_TRUSTED_ORIGINS=https://panel.example.com
+```
+
+<Note>
+  The `BETTER_AUTH_SECRET` must be at least 32 characters in production. Generate one using:
+  ```bash
+  openssl rand -base64 32
+  ```
+</Note>
+
+## Advanced: Admin API Key Permissions
+
+Admin API keys can have granular permissions using Access Control Lists (ACL):
+
+- `servers.read` - List and view servers
+- `servers.write` - Create and update servers
+- `users.read` - View users
+- `users.write` - Manage users
+- `nodes.read` - View nodes
+- `nodes.write` - Manage nodes
+
+These permissions are enforced via `requireAdminApiKeyPermission()` middleware.

@@ -1,0 +1,119 @@
+---
+title: 'Update Node'
+api: 'PATCH /api/admin/nodes/:id'
+description: 'Update node configuration and settings'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `nodes:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Node ID
+</ParamField>
+
+## Request Body
+
+<ParamField body="name" type="string">
+  Node name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Node description
+</ParamField>
+
+<ParamField body="fqdn" type="string">
+  Fully qualified domain name or IP address
+</ParamField>
+
+<ParamField body="scheme" type="string">
+  Connection scheme: `http` or `https`
+</ParamField>
+
+<ParamField body="public" type="boolean">
+  Whether the node is publicly accessible
+</ParamField>
+
+<ParamField body="maintenanceMode" type="boolean">
+  Whether the node is in maintenance mode
+</ParamField>
+
+<ParamField body="behindProxy" type="boolean">
+  Whether the node is behind a proxy
+</ParamField>
+
+<ParamField body="memory" type="integer">
+  Total memory in MB
+</ParamField>
+
+<ParamField body="memoryOverallocate" type="integer">
+  Memory overallocation percentage
+</ParamField>
+
+<ParamField body="disk" type="integer">
+  Total disk space in MB
+</ParamField>
+
+<ParamField body="diskOverallocate" type="integer">
+  Disk overallocation percentage
+</ParamField>
+
+<ParamField body="uploadSize" type="integer">
+  Maximum upload size in MB
+</ParamField>
+
+<ParamField body="daemonListen" type="integer">
+  Wings daemon listen port
+</ParamField>
+
+<ParamField body="daemonSftp" type="integer">
+  SFTP port
+</ParamField>
+
+<ParamField body="daemonBase" type="string">
+  Base directory for server files
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Updated node object with all properties
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PATCH "https://panel.example.com/api/admin/nodes/node-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "name": "US-East-1-Updated",
+    "memory": 32768,
+    "disk": 512000,
+    "maintenanceMode": false
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "node-uuid",
+    "name": "US-East-1-Updated",
+    "memory": 32768,
+    "disk": 512000,
+    "maintenanceMode": false
+  }
+}
+```
+</ResponseExample>
+
+## Notes
+
+- Only fields provided in the request body will be updated
+- At least one field must be provided
+- Maximum request body size is 32 KB
+- Changes may require Wings daemon restart to take full effect

@@ -1,0 +1,207 @@
+---
+title: Environment Variables
+description: Complete reference for all XyraPanel environment variables
+---
+
+XyraPanel uses environment variables for configuration. Copy `.env.example` to `.env` and customize the values for your environment.
+
+## Application Settings
+
+<ParamField path="APP_NAME" type="string" default="XyraPanel">
+  The name of your panel instance. This appears in the UI, emails, and page titles.
+</ParamField>
+
+<ParamField path="NODE_ENV" type="string" default="production">
+  Application environment. Set to `production` for production deployments or `development` for local development.
+</ParamField>
+
+<ParamField path="DEBUG" type="boolean" default="false">
+  Enable debug mode for additional logging. Only enable in development.
+</ParamField>
+
+## URLs and Authentication
+
+<ParamField path="BETTER_AUTH_URL" type="string" required>
+  The primary URL where your panel is accessible (e.g., `https://panel.example.com`).
+  
+  <Note>This must match your actual domain for authentication to work properly.</Note>
+</ParamField>
+
+<ParamField path="BETTER_AUTH_TRUSTED_ORIGINS" type="string" required>
+  Comma-separated list of trusted origins for authentication. Usually matches `BETTER_AUTH_URL`.
+</ParamField>
+
+<ParamField path="NUXT_PUBLIC_APP_URL" type="string" required>
+  Public URL for the application. Should match `BETTER_AUTH_URL`.
+</ParamField>
+
+<ParamField path="PANEL_PUBLIC_URL" type="string" required>
+  Public-facing URL for the panel (e.g., `https://panel.example.com`).
+</ParamField>
+
+<ParamField path="PANEL_INTERNAL_URL" type="string" default="http://127.0.0.1:3000">
+  Internal URL for server-to-server communication within Docker or local network.
+</ParamField>
+
+<ParamField path="PORT" type="number" default="3000">
+  Port number the application listens on.
+</ParamField>
+
+<ParamField path="XYRA_PASTE_URL" type="string" default="https://paste.xyrapanel.com">
+  URL for the paste service used for sharing logs and configuration.
+</ParamField>
+
+## Security
+
+<ParamField path="BETTER_AUTH_SECRET" type="string" required>
+  Secret key for authentication and session encryption. Must be at least 32 characters in production.
+  
+  Generate a secure secret:
+  ```bash
+  openssl rand -base64 32
+  ```
+  
+  <Warning>Never use default or weak values like "changeme" in production!</Warning>
+</ParamField>
+
+## Initial Admin Setup
+
+These variables configure the initial admin account created via `POST /api/system/seed`.
+
+<ParamField path="SEED_SECRET" type="string" required>
+  Secret key required to access the seed endpoint. Generate with:
+  ```bash
+  openssl rand -base64 32
+  ```
+</ParamField>
+
+<ParamField path="SEED_ADMIN_EMAIL" type="string" default="admin@example.com">
+  Email address for the initial admin account.
+</ParamField>
+
+<ParamField path="SEED_ADMIN_PASSWORD" type="string" default="changeme">
+  Password for the initial admin account.
+  
+  <Warning>Change this immediately after first login!</Warning>
+</ParamField>
+
+<ParamField path="SEED_ADMIN_USERNAME" type="string" default="admin">
+  Username for the initial admin account.
+</ParamField>
+
+<ParamField path="SEED_ADMIN_NAME" type="string" default="Admin">
+  Display name for the initial admin account.
+</ParamField>
+
+## Database
+
+XyraPanel requires PostgreSQL 14 or higher.
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string. Format:
+  ```
+  postgresql://username:password@host:port/database
+  ```
+  
+  Example:
+  ```
+  postgresql://xyra:changeme@postgres:5432/xyrapanel
+  ```
+</ParamField>
+
+### Docker-Only Variables
+
+These variables configure the PostgreSQL container in `docker-compose.yml`. They must match the credentials in `DATABASE_URL`.
+
+<ParamField path="DB_USER" type="string" default="xyra">
+  PostgreSQL username for Docker container.
+</ParamField>
+
+<ParamField path="DB_PASSWORD" type="string" default="changeme">
+  PostgreSQL password for Docker container.
+</ParamField>
+
+<ParamField path="DB_NAME" type="string" default="xyrapanel">
+  PostgreSQL database name for Docker container.
+</ParamField>
+
+## PM2 Configuration
+
+Optional PM2 process manager overrides.
+
+<ParamField path="INSTANCES" type="number" default="max">
+  Number of PM2 instances to run. Set to `1` for low-memory hosts.
+  
+  <Note>Uncomment this variable only if you need to override the default from `ecosystem.config.cjs`.</Note>
+</ParamField>
+
+<ParamField path="MAX_MEMORY_RESTART" type="string" default="1G">
+  Maximum memory before PM2 restarts the process (e.g., "1G", "512M").
+</ParamField>
+
+## HTTP Cache
+
+XyraPanel includes server-side HTTP caching for improved performance.
+
+<ParamField path="NUXT_HTTP_CACHE_ENABLED" type="boolean" default="true">
+  Enable or disable HTTP caching.
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_DEFAULT_MAX_AGE" type="number" default="5">
+  Default cache max-age in seconds for most endpoints.
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_DEFAULT_SWR" type="number" default="15">
+  Default stale-while-revalidate time in seconds.
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_DASHBOARD_MAX_AGE" type="number" default="10">
+  Cache max-age for dashboard endpoints (seconds).
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_DASHBOARD_SWR" type="number" default="30">
+  Stale-while-revalidate time for dashboard (seconds).
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_ADMIN_DASHBOARD_MAX_AGE" type="number" default="10">
+  Cache max-age for admin dashboard endpoints (seconds).
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_ADMIN_DASHBOARD_SWR" type="number" default="30">
+  Stale-while-revalidate time for admin dashboard (seconds).
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_ADMIN_NODE_MAX_AGE" type="number" default="5">
+  Cache max-age for admin node endpoints (seconds).
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_ADMIN_NODE_SWR" type="number" default="15">
+  Stale-while-revalidate time for admin nodes (seconds).
+</ParamField>
+
+## Request Limits
+
+<ParamField path="NUXT_MAX_REQUEST_SIZE_MB" type="number" default="10">
+  Maximum request body size in megabytes.
+</ParamField>
+
+<ParamField path="NUXT_MAX_UPLOAD_SIZE_MB" type="number" default="20">
+  Maximum file upload size in megabytes.
+</ParamField>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Redis Configuration" icon="database" href="/configuration/redis">
+    Configure Redis for caching and rate limiting
+  </Card>
+  <Card title="Security Settings" icon="shield" href="/configuration/security">
+    Configure CORS, CSP, and rate limiting
+  </Card>
+  <Card title="Email Configuration" icon="envelope" href="/configuration/email">
+    Set up email notifications
+  </Card>
+  <Card title="Captcha Setup" icon="robot" href="/configuration/captcha">
+    Configure captcha providers
+  </Card>
+</CardGroup>

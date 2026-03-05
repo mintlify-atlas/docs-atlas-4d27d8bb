@@ -1,0 +1,408 @@
+---
+title: Captcha Configuration
+description: Configure Cloudflare Turnstile, reCAPTCHA, or hCaptcha for bot protection
+---
+
+XyraPanel includes built-in captcha support to protect authentication endpoints from bots and automated attacks. Three providers are supported: Cloudflare Turnstile, Google reCAPTCHA, and hCaptcha.
+
+## Provider Selection
+
+<ParamField path="CAPTCHA_PROVIDER" type="string" required>
+  Choose your captcha provider:
+  
+  - `turnstile` - Cloudflare Turnstile (recommended)
+  - `recaptcha` - Google reCAPTCHA v3
+  - `hcaptcha` - hCaptcha
+  
+  ```bash
+  CAPTCHA_PROVIDER="turnstile"
+  ```
+</ParamField>
+
+<Note>
+  Only configure environment variables for your chosen provider. You don't need to set up all three.
+</Note>
+
+## Cloudflare Turnstile (Recommended)
+
+Turnstile is Cloudflare's privacy-focused alternative to reCAPTCHA with better user experience and no Google dependencies.
+
+### Why Turnstile?
+
+- **Privacy-focused**: No tracking or data collection
+- **Better UX**: Most users never see a challenge
+- **Free**: No limits for most use cases
+- **Fast**: Leverages Cloudflare's global network
+
+### Configuration
+
+<ParamField path="NUXT_TURNSTILE_SECRET_KEY" type="string" required>
+  Turnstile secret key from Cloudflare dashboard.
+  
+  ```bash
+  NUXT_TURNSTILE_SECRET_KEY="0x4AAA..."
+  ```
+</ParamField>
+
+<ParamField path="NUXT_PUBLIC_TURNSTILE_SITE_KEY" type="string" required>
+  Turnstile site key (public) from Cloudflare dashboard.
+  
+  ```bash
+  NUXT_PUBLIC_TURNSTILE_SITE_KEY="0x4BBB..."
+  ```
+  
+  **Test mode key:**
+  ```bash
+  NUXT_PUBLIC_TURNSTILE_SITE_KEY="1x00000000000000000000AA"
+  ```
+  
+  <Note>The test mode key always passes verification. Use only in development!</Note>
+</ParamField>
+
+### Setup Instructions
+
+<Steps>
+  <Step title="Create Turnstile site">
+    1. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com/)
+    2. Navigate to **Turnstile** in the sidebar
+    3. Click **Add Site**
+    4. Enter your domain (e.g., `panel.example.com`)
+    5. Choose widget mode: **Managed** (recommended)
+  </Step>
+  
+  <Step title="Get your keys">
+    After creating the site, copy:
+    - **Site Key** (public, used in frontend)
+    - **Secret Key** (private, used in backend)
+  </Step>
+  
+  <Step title="Configure environment">
+    Add to your `.env` file:
+    ```bash
+    CAPTCHA_PROVIDER="turnstile"
+    NUXT_TURNSTILE_SECRET_KEY="your-secret-key"
+    NUXT_PUBLIC_TURNSTILE_SITE_KEY="your-site-key"
+    ```
+  </Step>
+  
+  <Step title="Restart application">
+    Restart XyraPanel to apply the new configuration.
+  </Step>
+</Steps>
+
+## Google reCAPTCHA v3
+
+reCAPTCHA v3 provides invisible bot protection using risk analysis.
+
+### Configuration
+
+<ParamField path="NUXT_RECAPTCHA_SECRET_KEY" type="string" required>
+  reCAPTCHA secret key from Google.
+  
+  ```bash
+  NUXT_RECAPTCHA_SECRET_KEY="6LcXXX..."
+  ```
+</ParamField>
+
+<ParamField path="NUXT_RECAPTCHA_MIN_SCORE" type="number" default="0.5">
+  Minimum score required to pass verification (0.0 to 1.0).
+  
+  - `0.0` - Most lenient (may allow bots)
+  - `0.5` - Balanced (recommended)
+  - `1.0` - Strictest (may block legitimate users)
+  
+  ```bash
+  NUXT_RECAPTCHA_MIN_SCORE="0.5"
+  ```
+</ParamField>
+
+### Setup Instructions
+
+<Steps>
+  <Step title="Create reCAPTCHA site">
+    1. Go to [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin)
+    2. Click **+** to create a new site
+    3. Enter:
+       - Label: Your panel name
+       - reCAPTCHA type: **reCAPTCHA v3**
+       - Domains: Your domain (e.g., `panel.example.com`)
+    4. Accept terms and submit
+  </Step>
+  
+  <Step title="Get your keys">
+    After creating the site, copy:
+    - **Site Key** (public)
+    - **Secret Key** (private)
+  </Step>
+  
+  <Step title="Configure environment">
+    Add to your `.env` file:
+    ```bash
+    CAPTCHA_PROVIDER="recaptcha"
+    NUXT_RECAPTCHA_SECRET_KEY="your-secret-key"
+    NUXT_RECAPTCHA_MIN_SCORE="0.5"
+    ```
+  </Step>
+  
+  <Step title="Restart application">
+    Restart XyraPanel to apply the new configuration.
+  </Step>
+</Steps>
+
+### Adjusting Min Score
+
+If you receive complaints about false positives:
+
+- **Lower score** (0.3-0.4): More lenient, fewer false positives, slight security reduction
+- **Higher score** (0.6-0.7): Stricter protection, more false positives
+
+Monitor your reCAPTCHA analytics to find the optimal score for your use case.
+
+## hCaptcha
+
+hCaptcha is a privacy-focused alternative to reCAPTCHA.
+
+### Configuration
+
+<ParamField path="NUXT_HCAPTCHA_SECRET_KEY" type="string" required>
+  hCaptcha secret key from hCaptcha dashboard.
+  
+  ```bash
+  NUXT_HCAPTCHA_SECRET_KEY="0x4CCC..."
+  ```
+</ParamField>
+
+<ParamField path="NUXT_HCAPTCHA_SITE_KEY" type="string" required>
+  hCaptcha site key (public) from hCaptcha dashboard.
+  
+  ```bash
+  NUXT_HCAPTCHA_SITE_KEY="10000000-ffff-ffff-ffff-000000000001"
+  ```
+</ParamField>
+
+### Setup Instructions
+
+<Steps>
+  <Step title="Create hCaptcha site">
+    1. Log in to [hCaptcha Dashboard](https://dashboard.hcaptcha.com/)
+    2. Click **New Site**
+    3. Enter your domain (e.g., `panel.example.com`)
+    4. Choose difficulty: **Auto** (recommended)
+    5. Save
+  </Step>
+  
+  <Step title="Get your keys">
+    After creating the site:
+    - **Site Key** - Displayed on the site list
+    - **Secret Key** - Available in Settings
+  </Step>
+  
+  <Step title="Configure environment">
+    Add to your `.env` file:
+    ```bash
+    CAPTCHA_PROVIDER="hcaptcha"
+    NUXT_HCAPTCHA_SECRET_KEY="your-secret-key"
+    NUXT_HCAPTCHA_SITE_KEY="your-site-key"
+    ```
+  </Step>
+  
+  <Step title="Restart application">
+    Restart XyraPanel to apply the new configuration.
+  </Step>
+</Steps>
+
+## Protected Endpoints
+
+Captcha verification is automatically applied to these endpoints:
+
+| Endpoint | Purpose |
+|----------|----------|
+| `POST /api/auth/sign-in/*` | User login |
+| `POST /api/auth/sign-up/*` | User registration |
+| `POST /api/auth/forget-password` | Password reset request |
+
+<Note>
+  Captcha integration is handled automatically by better-auth. No additional code changes are needed.
+</Note>
+
+## Testing Captcha
+
+### Development Mode
+
+For local testing, use provider-specific test keys:
+
+**Turnstile:**
+```bash
+NUXT_PUBLIC_TURNSTILE_SITE_KEY="1x00000000000000000000AA"
+NUXT_TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
+```
+
+**reCAPTCHA:**
+Use localhost domain in reCAPTCHA admin panel.
+
+**hCaptcha:**
+Use localhost domain in hCaptcha settings.
+
+### Production Testing
+
+<Steps>
+  <Step title="Test login flow">
+    Attempt to log in with correct credentials. Captcha should be validated automatically.
+  </Step>
+  
+  <Step title="Test password reset">
+    Request a password reset to verify captcha on that endpoint.
+  </Step>
+  
+  <Step title="Monitor captcha analytics">
+    Check your captcha provider's dashboard for verification statistics.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Captcha not appearing">
+    **Possible causes:**
+    - `NUXT_PUBLIC_TURNSTILE_SITE_KEY` not set (Turnstile)
+    - JavaScript errors in browser console
+    - Content Security Policy blocking captcha scripts
+    
+    **Solutions:**
+    - Check environment variables are set correctly
+    - Check browser console for errors
+    - Verify CSP allows captcha domains (see [Security Configuration](/configuration/security))
+  </Accordion>
+  
+  <Accordion title="Verification always fails">
+    **Possible causes:**
+    - Incorrect secret key
+    - Domain mismatch (configured domain doesn't match actual domain)
+    - Using test keys in production
+    
+    **Solutions:**
+    - Verify `NUXT_TURNSTILE_SECRET_KEY` or equivalent is correct
+    - Check domain configuration in captcha provider dashboard
+    - Ensure you're using production keys, not test keys
+  </Accordion>
+  
+  <Accordion title="High false positive rate (reCAPTCHA)">
+    **Possible causes:**
+    - `NUXT_RECAPTCHA_MIN_SCORE` set too high
+    - Legitimate users flagged as suspicious
+    
+    **Solutions:**
+    - Lower `NUXT_RECAPTCHA_MIN_SCORE` to 0.3 or 0.4
+    - Monitor reCAPTCHA analytics to find optimal score
+    - Consider switching to Turnstile for better UX
+  </Accordion>
+  
+  <Accordion title="CSP violations">
+    **Symptoms:** Captcha blocked by Content Security Policy
+    
+    **Solution:**
+    XyraPanel's default CSP includes necessary captcha domains:
+    - Turnstile: `https://challenges.cloudflare.com`
+    - reCAPTCHA: Allowed via `https:` in script-src
+    - hCaptcha: Allowed via `https:` in script-src
+    
+    If you've customized CSP, ensure these domains are allowed.
+  </Accordion>
+</AccordionGroup>
+
+## Provider Comparison
+
+| Feature | Turnstile | reCAPTCHA v3 | hCaptcha |
+|---------|-----------|--------------|----------|
+| **Privacy** | Excellent | Poor | Good |
+| **Free tier** | Unlimited | 1M assessments/month | Unlimited |
+| **User friction** | Very low | None (invisible) | Low-Medium |
+| **Accuracy** | Excellent | Excellent | Very good |
+| **Setup difficulty** | Easy | Easy | Easy |
+| **Google dependency** | No | Yes | No |
+| **GDPR compliance** | Yes | Requires consent | Yes |
+| **Accessibility** | Excellent | Good | Good |
+
+## Recommendations
+
+<Card title="Best for most users" icon="star">
+  **Cloudflare Turnstile**
+  
+  Excellent privacy, UX, and performance. No Google dependencies. Free and unlimited.
+</Card>
+
+<Card title="Best for Google ecosystem" icon="google">
+  **Google reCAPTCHA v3**
+  
+  Good if you're already using Google services. Invisible to users but raises privacy concerns.
+</Card>
+
+<Card title="Best for privacy-first organizations" icon="shield">
+  **hCaptcha**
+  
+  Good privacy and GDPR compliance. Slightly more visible to users than Turnstile.
+</Card>
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Rotate keys periodically">
+    Rotate your captcha keys every 6-12 months as part of security maintenance.
+  </Accordion>
+  
+  <Accordion title="Monitor analytics">
+    Regularly check your captcha provider's dashboard for unusual patterns or verification failures.
+  </Accordion>
+  
+  <Accordion title="Combine with rate limiting">
+    Captcha works best alongside rate limiting. See [Security Configuration](/configuration/security).
+  </Accordion>
+  
+  <Accordion title="Don't rely solely on captcha">
+    Captcha is one layer of defense. Always implement other security measures like rate limiting, account lockouts, and monitoring.
+  </Accordion>
+  
+  <Accordion title="Keep secret keys secure">
+    Never commit secret keys to version control. Use environment variables and secure secret management.
+  </Accordion>
+</AccordionGroup>
+
+## Switching Providers
+
+To switch captcha providers:
+
+<Steps>
+  <Step title="Update environment variables">
+    Remove old provider's keys and add new provider's keys in `.env`.
+  </Step>
+  
+  <Step title="Change CAPTCHA_PROVIDER">
+    Update `CAPTCHA_PROVIDER` to your new provider:
+    ```bash
+    CAPTCHA_PROVIDER="turnstile"
+    ```
+  </Step>
+  
+  <Step title="Restart application">
+    Restart XyraPanel to load the new configuration.
+  </Step>
+  
+  <Step title="Test authentication">
+    Verify login and password reset work with the new provider.
+  </Step>
+</Steps>
+
+<Warning>
+  Users with active sessions won't be affected by the switch, but new authentication attempts will use the new provider immediately.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Security Configuration" icon="shield" href="/configuration/security">
+    Configure rate limiting and CORS
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/configuration/environment-variables">
+    View all configuration options
+  </Card>
+</CardGroup>

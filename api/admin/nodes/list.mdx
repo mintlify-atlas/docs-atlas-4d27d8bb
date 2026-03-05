@@ -1,0 +1,60 @@
+---
+title: 'List Nodes'
+api: 'GET /api/admin/nodes'
+description: 'Retrieve a list of all Wings nodes'
+---
+
+## Authentication
+
+This endpoint requires admin authentication.
+
+## Response
+
+<ResponseField name="data" type="array">
+  Array of node objects
+  
+  <Expandable title="Node Object">
+    <ResponseField name="id" type="string">
+      Node ID
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Node name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://panel.example.com/api/admin/nodes" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": [
+    {
+      "id": "node-uuid-1",
+      "name": "US-East-1"
+    },
+    {
+      "id": "node-uuid-2",
+      "name": "EU-West-1"
+    },
+    {
+      "id": "node-uuid-3",
+      "name": "AP-Southeast-1"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+## Notes
+
+- This is a simplified endpoint that returns only node IDs and names
+- Results are ordered alphabetically by node name
+- For detailed node information, use the Wings-specific node endpoints

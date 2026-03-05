@@ -1,0 +1,155 @@
+---
+title: 'List Servers'
+api: 'GET /api/admin/servers'
+description: 'Retrieve a paginated list of all servers'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `servers:read` permission.
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="perPage" type="integer" default="50">
+  Number of servers per page (max: 100)
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Alternative parameter name for `perPage`
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Alternative parameter name for `perPage`
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="array">
+  Array of server objects
+  
+  <Expandable title="Server Object">
+    <ResponseField name="id" type="string">
+      Server UUID
+    </ResponseField>
+    
+    <ResponseField name="uuid" type="string">
+      Server UUID
+    </ResponseField>
+    
+    <ResponseField name="identifier" type="string">
+      Short server identifier (8 characters)
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Server name
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Server status (installing, running, stopped, etc.)
+    </ResponseField>
+    
+    <ResponseField name="owner" type="object" nullable>
+      Server owner information
+      
+      <Expandable title="Owner Object">
+        <ResponseField name="id" type="string">
+          Owner user ID
+        </ResponseField>
+        
+        <ResponseField name="username" type="string">
+          Owner username
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="node" type="object" nullable>
+      Node information
+      
+      <Expandable title="Node Object">
+        <ResponseField name="id" type="string">
+          Node ID
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          Node name
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of server creation
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  
+  <Expandable title="Pagination Object">
+    <ResponseField name="pagination.total" type="integer">
+      Total number of servers
+    </ResponseField>
+    
+    <ResponseField name="pagination.count" type="integer">
+      Number of servers in current page
+    </ResponseField>
+    
+    <ResponseField name="pagination.per_page" type="integer">
+      Servers per page
+    </ResponseField>
+    
+    <ResponseField name="pagination.current_page" type="integer">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="pagination.total_pages" type="integer">
+      Total number of pages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://panel.example.com/api/admin/servers?page=1&perPage=50" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "identifier": "a1b2c3d4",
+      "name": "Production Server",
+      "status": "running",
+      "owner": {
+        "id": "user-uuid",
+        "username": "john.doe"
+      },
+      "node": {
+        "id": "node-uuid",
+        "name": "US-East-1"
+      },
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "total": 150,
+      "count": 50,
+      "per_page": 50,
+      "current_page": 1,
+      "total_pages": 3
+    }
+  }
+}
+```
+</ResponseExample>

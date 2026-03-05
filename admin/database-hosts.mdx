@@ -1,0 +1,456 @@
+---
+title: 'Database Host Management'
+description: 'Configure MySQL/MariaDB hosts for server databases'
+icon: 'database'
+---
+
+## What are Database Hosts?
+
+Database hosts are MySQL or MariaDB servers that provide databases for game servers. When users create a database for their server, XyraPanel provisions it on one of your configured database hosts.
+
+**Use cases**:
+- Store player data (Minecraft plugins, game stats)
+- Persistent configuration (web-based admin panels)
+- Cross-server data sharing
+- Leaderboards and economies
+
+## Prerequisites
+
+Before adding a database host:
+
+1. **MySQL/MariaDB Server**
+   - Running MySQL 5.7+ or MariaDB 10.3+
+   - Accessible from the panel and Wings nodes
+   - Configured for remote connections
+
+2. **Administrative User**
+   - User with `CREATE`, `DROP`, `ALTER` privileges
+   - Ability to create new databases and users
+   - Remote connection permissions
+
+## Adding a Database Host
+
+<Steps>
+  <Step title="Navigate to database hosts">
+    Go to **Admin** > **Database Hosts**.
+  </Step>
+
+  <Step title="Add new host">
+    Click **Add Database Host** and configure:
+
+    **Name** (required)
+    - Friendly identifier
+    - Example: "Main MySQL Server", "EU Database 1"
+
+    **Hostname** (required)
+    - IP address or domain name
+    - Example: `mysql.example.com`, `192.0.2.10`
+
+    **Port** (required)
+    - MySQL port, typically `3306`
+
+    **Username** (required)
+    - MySQL user with admin privileges
+    - Example: `pterodactyl`, `dbadmin`
+
+    **Password** (required)
+    - Password for the MySQL user
+    - Stored encrypted in the panel database
+
+    **Default Database** (optional)
+    - Database to connect to for operations
+    - Typically leave blank or use `mysql`
+
+    **Max Databases** (optional)
+    - Limit on databases this host can create
+    - Leave blank or `0` for unlimited
+  </Step>
+
+  <Step title="Test connection">
+    After saving, click **Test Connection** to verify:
+    - Hostname and port are reachable
+    - Credentials are correct
+    - User has required privileges
+  </Step>
+</Steps>
+
+## Configuring MySQL Server
+
+### Remote Access
+
+Allow connections from the panel and nodes:
+
+```sql
+-- Create admin user for panel
+CREATE USER 'pterodactyl'@'%' IDENTIFIED BY 'strong_password';
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON *.* TO 'pterodactyl'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
+
+<Warning>
+  Using `'pterodactyl'@'%'` allows connections from any IP. For security, restrict to panel and node IPs:
+  ```sql
+  CREATE USER 'pterodactyl'@'192.0.2.0/24' IDENTIFIED BY 'password';
+  ```
+</Warning>
+
+### MySQL Configuration
+
+Edit `/etc/mysql/mysql.conf.d/mysqld.cnf`:
+
+```ini
+[mysqld]
+# Allow remote connections
+bind-address = 0.0.0.0
+
+# Performance tuning
+max_connections = 500
+max_allowed_packet = 64M
+innodb_buffer_pool_size = 2G
+```
+
+Restart MySQL:
+```bash
+systemctl restart mysql
+```
+
+### Firewall Rules
+
+Allow MySQL port:
+
+```bash
+# UFW
+ufw allow 3306/tcp
+
+# iptables
+iptables -A INPUT -p tcp --dport 3306 -j ACCEPT
+```
+
+## Managing Database Hosts
+
+### Viewing Databases
+
+The host list shows:
+- **Name**: Host identifier
+- **Hostname:Port**: Connection endpoint
+- **Username**: MySQL user
+- **Databases**: Current count / Maximum limit
+
+### Testing Connection
+
+Click the **test icon** to verify:
+✅ Connection successful  
+❌ Connection failed (error details shown)
+
+**Common errors**:
+- `Connection refused`: MySQL not running or firewall blocking
+- `Access denied`: Incorrect credentials or missing privileges
+- `Unknown host`: Hostname DNS resolution failed
+
+### Editing Hosts
+
+You can update:
+- Name (display only)
+- Hostname/port (use caution, breaks existing databases)
+- Credentials (if rotated)
+- Max databases limit
+
+<Warning>
+  Changing the hostname or port will break all existing database connections. Update with caution.
+</Warning>
+
+### Deleting Hosts
+
+<Warning>
+  You cannot delete a database host that has active databases. Remove all databases first.
+</Warning>
+
+<Steps>
+  <Step title="Check database count">
+    Ensure the host shows `0 databases` in the list.
+  </Step>
+
+  <Step title="Delete unused host">
+    Click the **trash icon** and confirm deletion.
+  </Step>
+</Steps>
+
+## Database Creation
+
+When a user creates a database for their server:
+
+1. **Panel selects a host**
+   - Chooses host with available capacity
+   - Prefers hosts on the same node (if configured)
+
+2. **Creates database**
+   ```sql
+   CREATE DATABASE s123_mydb;
+   ```
+
+3. **Creates user**
+   ```sql
+   CREATE USER 's123_user'@'%' IDENTIFIED BY 'generated_password';
+   ```
+
+4. **Grants permissions**
+   ```sql
+   GRANT ALL PRIVILEGES ON s123_mydb.* TO 's123_user'@'%';
+   ```
+
+5. **Returns credentials**
+   - Database name: `s123_mydb`
+   - Username: `s123_user`
+   - Password: (auto-generated)
+   - Host: `mysql.example.com:3306`
+
+### Database Naming
+
+Databases are prefixed with the server ID:
+```
+s{SERVER_ID}_{DATABASE_NAME}
+
+Example:
+s123_playerdata
+s123_economy
+s456_website
+```
+
+This prevents naming conflicts between servers.
+
+## Node-Specific Hosts
+
+Assign a database host to a specific node:
+
+```json
+{
+  "name": "US-East MySQL",
+  "hostname": "mysql-us-east.example.com",
+  "nodeId": "uuid-of-node"
+}
+```
+
+**Benefits**:
+- Reduced latency (database close to server)
+- Geographic data residency
+- Load distribution
+
+**Behavior**:
+- Servers on that node use this host by default
+- Falls back to general hosts if unavailable
+
+## Monitoring
+
+### Database Capacity
+
+Track usage per host:
+```
+Main MySQL Server
+  45 / 100 databases (45%)
+
+EU Database 1
+  23 / 50 databases (46%)
+```
+
+Set `Max Databases` to prevent overloading.
+
+### Connection Pooling
+
+MySQL `max_connections` should accommodate:
+- Panel connections (1-2 per request)
+- Game server connections (varies by game)
+- Admin tools (phpMyAdmin, etc.)
+
+**Calculation**:
+```
+(Average concurrent servers × Connections per server) + 50
+
+Example:
+(100 servers × 3 connections) + 50 = 350 connections
+```
+
+Set `max_connections = 500` for headroom.
+
+## Backup and Maintenance
+
+### Automated Backups
+
+Schedule regular MySQL dumps:
+
+```bash
+#!/bin/bash
+# /usr/local/bin/backup-mysql.sh
+
+BACKUP_DIR="/backup/mysql"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mysqldump --all-databases --single-transaction \
+  -u root -p${MYSQL_ROOT_PASSWORD} \
+  > ${BACKUP_DIR}/all-databases-${DATE}.sql
+
+# Compress backup
+gzip ${BACKUP_DIR}/all-databases-${DATE}.sql
+
+# Retain last 7 days
+find ${BACKUP_DIR} -name "all-databases-*.sql.gz" -mtime +7 -delete
+```
+
+Add to cron:
+```bash
+0 2 * * * /usr/local/bin/backup-mysql.sh
+```
+
+### Database Maintenance
+
+Optimize tables monthly:
+
+```bash
+mysqlcheck -u root -p --auto-repair --optimize --all-databases
+```
+
+## Security Best Practices
+
+### Network Security
+
+✅ **Isolate database server**
+- Use private network between panel/nodes and database
+- Firewall rules limiting access to specific IPs
+- Disable public internet access
+
+❌ **Avoid**
+- Exposing MySQL to the internet
+- Using default passwords
+- Running MySQL on the same server as game servers
+
+### User Privileges
+
+✅ **Minimal permissions**
+```sql
+-- Panel user (can create databases and users)
+GRANT CREATE, DROP, ALTER, GRANT OPTION ON *.* 
+  TO 'pterodactyl'@'panel-ip';
+
+-- Server database user (limited to their database)
+GRANT ALL PRIVILEGES ON s123_mydb.* TO 's123_user'@'%';
+```
+
+❌ **Excessive permissions**
+```sql
+-- Don't grant SUPER or FILE privileges to panel user
+GRANT ALL PRIVILEGES ON *.* TO 'pterodactyl'@'%'; -- TOO PERMISSIVE
+```
+
+### Password Management
+
+✅ **Strong passwords**
+- Panel-generated passwords are cryptographically random
+- Store MySQL root password securely
+- Rotate credentials periodically
+
+❌ **Weak passwords**
+- Don't use simple passwords for admin user
+- Don't reuse passwords across environments
+
+## Troubleshooting
+
+### Cannot connect to database host
+
+**Check**:
+1. MySQL is running:
+   ```bash
+   systemctl status mysql
+   ```
+
+2. Port is listening:
+   ```bash
+   netstat -tlnp | grep 3306
+   ```
+
+3. Firewall allows connections:
+   ```bash
+   ufw status
+   ```
+
+4. Credentials are correct:
+   ```bash
+   mysql -h hostname -u username -p
+   ```
+
+### Database creation fails
+
+**Common causes**:
+- MySQL user lacks `CREATE` privilege
+- Max databases limit reached
+- Disk space full on MySQL server
+- Invalid database name characters
+
+**Check privileges**:
+```sql
+SHOW GRANTS FOR 'pterodactyl'@'%';
+```
+
+### Game server can't connect to database
+
+**Verify**:
+1. Database exists:
+   ```sql
+   SHOW DATABASES LIKE 's%';
+   ```
+
+2. User can connect:
+   ```bash
+   mysql -h hostname -u s123_user -p s123_mydb
+   ```
+
+3. Server has network access:
+   ```bash
+   # From Wings node
+   telnet mysql.example.com 3306
+   ```
+
+## Performance Tuning
+
+### InnoDB Buffer Pool
+
+Set to 70-80% of available RAM:
+
+```ini
+[mysqld]
+# For 8 GB RAM server
+innodb_buffer_pool_size = 6G
+```
+
+### Query Cache (MySQL 5.7)
+
+```ini
+[mysqld]
+query_cache_type = 1
+query_cache_size = 128M
+query_cache_limit = 2M
+```
+
+<Warning>
+  Query cache is removed in MySQL 8.0+. Use other optimization techniques.
+</Warning>
+
+### Connection Limits
+
+```ini
+[mysqld]
+max_connections = 500
+wait_timeout = 600
+interactive_timeout = 600
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Server Databases" icon="database" href="/features/databases">
+    How users create and manage databases
+  </Card>
+  <Card title="Nodes" icon="server" href="/admin/nodes">
+    Configure node-specific database hosts
+  </Card>
+</CardGroup>

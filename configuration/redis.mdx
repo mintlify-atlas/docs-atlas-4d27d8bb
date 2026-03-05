@@ -1,0 +1,230 @@
+---
+title: Redis Configuration
+description: Configure Redis for caching, sessions, and rate limiting
+---
+
+Redis is required for XyraPanel's caching, session storage, and rate limiting features. Both standalone Redis and Redis clusters are supported.
+
+## Basic Configuration
+
+<ParamField path="REDIS_HOST" type="string" default="redis">
+  Redis server hostname or IP address.
+  
+  - Docker: `redis` (container name)
+  - Local development: `localhost`
+  - Production: Your Redis server IP or hostname
+</ParamField>
+
+<ParamField path="REDIS_PORT" type="number" default="6379">
+  Redis server port number.
+</ParamField>
+
+<ParamField path="REDIS_USERNAME" type="string" optional>
+  Redis username for authentication (Redis 6+).
+  
+  <Note>Leave blank if your Redis server doesn't require authentication.</Note>
+</ParamField>
+
+<ParamField path="REDIS_PASSWORD" type="string" optional>
+  Redis password for authentication.
+  
+  <Warning>Always use a strong password in production environments!</Warning>
+</ParamField>
+
+<ParamField path="REDIS_TLS" type="boolean" default="false">
+  Enable TLS/SSL for Redis connections. Set to `true` for secure connections.
+  
+  ```bash
+  REDIS_TLS="true"
+  ```
+</ParamField>
+
+## Nuxt/Nitro Storage Configuration
+
+These variables configure Nuxt's server-side caching layer:
+
+<ParamField path="NITRO_STORAGE_CACHE_DRIVER" type="string" default="redis">
+  Storage driver for Nitro caching. Use `redis` for production.
+</ParamField>
+
+<ParamField path="NITRO_STORAGE_CACHE_HOST" type="string" default="redis">
+  Redis host for Nitro storage. Should match `REDIS_HOST`.
+</ParamField>
+
+<ParamField path="NITRO_STORAGE_CACHE_PORT" type="number" default="6379">
+  Redis port for Nitro storage. Should match `REDIS_PORT`.
+</ParamField>
+
+<ParamField path="NUXT_REDIS_HOST" type="string" default="redis">
+  Redis host for Nuxt runtime. Should match `REDIS_HOST`.
+</ParamField>
+
+<ParamField path="NUXT_REDIS_PORT" type="number" default="6379">
+  Redis port for Nuxt runtime. Should match `REDIS_PORT`.
+</ParamField>
+
+<Note>
+  In most cases, all Redis configuration variables should point to the same Redis instance. Only use different values if you have a specialized multi-Redis setup.
+</Note>
+
+## Configuration Examples
+
+### Docker Compose
+
+Default configuration for Docker deployments:
+
+```bash .env
+REDIS_HOST="redis"
+REDIS_PORT="6379"
+# No authentication by default in Docker
+
+NITRO_STORAGE_CACHE_DRIVER="redis"
+NITRO_STORAGE_CACHE_HOST="redis"
+NITRO_STORAGE_CACHE_PORT="6379"
+NUXT_REDIS_HOST="redis"
+NUXT_REDIS_PORT="6379"
+```
+
+### Local Development
+
+Configuration for local Redis installation:
+
+```bash .env
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+
+NITRO_STORAGE_CACHE_DRIVER="redis"
+NITRO_STORAGE_CACHE_HOST="localhost"
+NITRO_STORAGE_CACHE_PORT="6379"
+NUXT_REDIS_HOST="localhost"
+NUXT_REDIS_PORT="6379"
+```
+
+### Production with Authentication
+
+Secure Redis configuration for production:
+
+```bash .env
+REDIS_HOST="redis.example.com"
+REDIS_PORT="6379"
+REDIS_USERNAME="xyrapanel"
+REDIS_PASSWORD="your-secure-password-here"
+REDIS_TLS="true"
+
+NITRO_STORAGE_CACHE_DRIVER="redis"
+NITRO_STORAGE_CACHE_HOST="redis.example.com"
+NITRO_STORAGE_CACHE_PORT="6379"
+NUXT_REDIS_HOST="redis.example.com"
+NUXT_REDIS_PORT="6379"
+```
+
+### Redis Cluster
+
+For Redis cluster deployments, point to your cluster endpoint:
+
+```bash .env
+REDIS_HOST="redis-cluster.example.com"
+REDIS_PORT="6379"
+REDIS_PASSWORD="cluster-password"
+REDIS_TLS="true"
+
+NITRO_STORAGE_CACHE_DRIVER="redis"
+NITRO_STORAGE_CACHE_HOST="redis-cluster.example.com"
+NITRO_STORAGE_CACHE_PORT="6379"
+NUXT_REDIS_HOST="redis-cluster.example.com"
+NUXT_REDIS_PORT="6379"
+```
+
+## Redis Usage in XyraPanel
+
+Redis is used for:
+
+1. **Rate Limiting**: API rate limits stored in Redis (when `NUXT_SECURITY_RATE_LIMIT_DRIVER=redis`)
+2. **Session Caching**: Server-side cache for session data
+3. **HTTP Caching**: Response caching for improved performance
+4. **Nitro Storage**: Nuxt's internal storage layer
+
+<Note>
+  XyraPanel automatically falls back to in-memory LRU cache if Redis is unavailable, but this is not recommended for production as rate limits and cache won't be shared across multiple instances.
+</Note>
+
+## Verifying Redis Connection
+
+After configuring Redis, verify the connection:
+
+<Steps>
+  <Step title="Check Redis connectivity">
+    Test the connection using redis-cli:
+    ```bash
+    redis-cli -h your-redis-host -p 6379 ping
+    ```
+    Should return `PONG`.
+  </Step>
+  
+  <Step title="Start XyraPanel">
+    Start your panel and check the logs for Redis connection messages.
+  </Step>
+  
+  <Step title="Monitor Redis keys">
+    Watch Redis keys being created:
+    ```bash
+    redis-cli -h your-redis-host -p 6379 monitor
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Connection Refused
+
+If you see "Connection refused" errors:
+
+- Verify Redis is running: `redis-cli ping`
+- Check firewall rules allow connections on port 6379
+- Verify `REDIS_HOST` points to the correct hostname/IP
+
+### Authentication Failed
+
+If authentication fails:
+
+- Verify `REDIS_PASSWORD` matches your Redis configuration
+- Check if Redis requires a username (Redis 6+)
+- Test manually: `redis-cli -h host -p port -a password ping`
+
+### TLS/SSL Errors
+
+For TLS connection issues:
+
+- Ensure `REDIS_TLS="true"` is set
+- Verify your Redis server supports TLS
+- Check certificate validity if using custom certificates
+
+## Performance Tuning
+
+For high-traffic deployments:
+
+```bash
+# Increase Redis max memory (redis.conf)
+maxmemory 2gb
+maxmemory-policy allkeys-lru
+
+# Enable persistence (optional)
+save 900 1
+save 300 10
+save 60 10000
+```
+
+<Warning>
+  Monitor Redis memory usage in production. Configure `maxmemory` and eviction policies appropriate for your workload.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Security Configuration" icon="shield" href="/configuration/security">
+    Configure rate limiting with Redis
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/configuration/environment-variables">
+    View all configuration options
+  </Card>
+</CardGroup>

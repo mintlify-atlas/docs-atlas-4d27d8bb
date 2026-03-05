@@ -1,0 +1,191 @@
+---
+title: Creating Game Servers
+description: Learn how to create and configure game servers in XyraPanel
+icon: 'server'
+---
+
+## Overview
+
+XyraPanel provides a powerful interface for creating and managing game servers. Servers can be created by administrators through the admin panel with full control over resources, allocations, and configuration.
+
+## Prerequisites
+
+<Note>
+  Before creating a server, ensure you have:
+  - Admin access to XyraPanel
+  - At least one configured Node with available resources
+  - A Nest and Egg configured for your game type
+  - Available IP allocations on your Node
+</Note>
+
+## Creating a Server
+
+Administrators can create servers through the admin panel with a step-by-step wizard.
+
+<Steps>
+  <Step title="Access Server Creation">
+    Navigate to the admin panel and click **Servers** → **Create Server**.
+    
+    The creation wizard guides you through 6 steps to configure your server.
+  </Step>
+
+  <Step title="Select Owner">
+    Choose the user who will own this server. You can:
+    - Search for users by username or email
+    - Assign yourself as the owner
+    - Assign any registered user
+    
+    The owner will have full access to manage the server.
+  </Step>
+
+  <Step title="Choose Game Type">
+    Select the **Nest** and **Egg** for your server:
+    
+    - **Nest**: The game category (e.g., Minecraft, Rust, CS:GO)
+    - **Egg**: The specific game version or modpack
+    
+    Each egg comes with pre-configured startup commands and environment variables.
+  </Step>
+
+  <Step title="Configure Resources">
+    Set the resource limits for your server:
+    
+    <Tabs>
+      <Tab title="Memory">
+        - **Memory**: RAM allocated in MB (e.g., 1024 MB = 1 GB)
+        - **Swap**: Additional swap space in MB (0 to disable)
+        
+        Recommended: 2048 MB for most Minecraft servers
+      </Tab>
+      
+      <Tab title="Disk & CPU">
+        - **Disk**: Storage space in MB (e.g., 5120 MB = 5 GB)
+        - **CPU**: CPU limit as percentage (100 = 1 core)
+        - **I/O Weight**: Disk I/O priority (500 is default)
+        
+        Example: Set CPU to 200 for 2 cores worth of processing power
+      </Tab>
+      
+      <Tab title="Limits">
+        - **Databases**: Number of MySQL databases allowed (0 = unlimited)
+        - **Allocations**: Additional IP:Port assignments
+        - **Backups**: Maximum number of backups (0 = unlimited)
+        
+        These can be adjusted later if needed.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Select Node & Allocation">
+    Choose where your server will run:
+    
+    - **Node**: The physical/virtual machine to host the server
+    - **Primary Allocation**: The IP:Port players will connect to
+    
+    Only nodes with available resources will be shown.
+  </Step>
+
+  <Step title="Configure Startup">
+    Customize startup settings:
+    
+    - **Docker Image**: The container image to use (default provided by egg)
+    - **Startup Command**: Command to launch the server (pre-filled from egg)
+    - **Environment Variables**: Game-specific settings like server name, max players, world seed
+    
+    <Warning>
+      Modifying the Docker image or startup command incorrectly can prevent your server from starting.
+    </Warning>
+  </Step>
+
+  <Step title="Additional Options">
+    Configure final settings:
+    
+    - **Skip Install Script**: Skip the egg's installation process (advanced)
+    - **Start on Completion**: Automatically start server after installation
+    - **OOM Killer**: Disable out-of-memory killer (not recommended)
+    
+    Click **Create Server** to provision your server.
+  </Step>
+</Steps>
+
+## Server List
+
+After creation, servers appear in your server list at `/server`. The list shows:
+
+- **Server name** and identifier
+- **Current status** (offline, starting, running, stopping, suspended)
+- **Node location**
+- **Primary IP:Port allocation**
+- **Resource limits** (CPU, RAM, Disk)
+- **Server description**
+
+### Server Status Badges
+
+<Card title="Status Indicators">
+  - **Running** (Green): Server is online and accepting connections
+  - **Offline** (Red): Server is stopped
+  - **Starting** (Yellow): Server is booting up
+  - **Stopping** (Yellow): Server is shutting down
+  - **Installing** (Yellow): Server is being installed
+  - **Suspended** (Red): Server has been suspended by an administrator
+  - **Transferring** (Yellow): Server is being moved to another node
+</Card>
+
+## API Endpoint
+
+Servers are created via the admin API:
+
+```bash
+POST /api/admin/servers
+```
+
+<Accordion title="Request Body Example">
+```json
+{
+  "name": "My Minecraft Server",
+  "description": "Survival server for friends",
+  "ownerId": "user-uuid",
+  "nestId": "nest-uuid",
+  "eggId": "egg-uuid",
+  "nodeId": "node-uuid",
+  "allocationId": "allocation-uuid",
+  "memory": 2048,
+  "swap": 0,
+  "disk": 10240,
+  "cpu": 100,
+  "io": 500,
+  "databases": 1,
+  "allocations": 0,
+  "backups": 3,
+  "startup": "java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar server.jar",
+  "environment": {
+    "SERVER_JARFILE": "server.jar",
+    "VANILLA_VERSION": "latest"
+  },
+  "dockerImage": "ghcr.io/pterodactyl/yolks:java_17",
+  "startOnCompletion": true,
+  "skipScripts": false,
+  "oomDisabled": false
+}
+```
+</Accordion>
+
+## Quick Actions
+
+From the server list, you can:
+
+- Click on a server name to access its console
+- View real-time status and resource usage
+- Filter servers by name, identifier, or node
+- Switch between viewing your servers or all servers (admins only)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Server Console" icon="terminal" href="/servers/server-console">
+    Learn how to use the real-time console and manage your server
+  </Card>
+  <Card title="File Management" icon="folder" href="/servers/file-management">
+    Browse, edit, and manage your server files
+  </Card>
+</CardGroup>

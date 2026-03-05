@@ -1,0 +1,326 @@
+---
+title: Server Console
+description: Real-time console access with xterm.js for managing your game servers
+icon: 'terminal'
+---
+
+## Overview
+
+The Server Console provides real-time access to your game server through a powerful web-based terminal powered by **xterm.js**. Monitor logs, execute commands, and control your server without SSH access.
+
+## Accessing the Console
+
+Navigate to your server and click the **Console** tab, or visit:
+
+```
+/server/{server-identifier}/console
+```
+
+The console establishes a WebSocket connection to stream live server output and accept commands.
+
+## Power Controls
+
+The console provides quick power action buttons:
+
+<CardGroup cols={2}>
+  <Card title="Start" icon="play" color="green">
+    Boot your server. Disabled when server is already running or starting.
+  </Card>
+  <Card title="Restart" icon="rotate-right" color="orange">
+    Gracefully restart your server. Only available when server is running.
+  </Card>
+  <Card title="Stop" icon="square" color="red">
+    Gracefully shut down your server. Sends shutdown signal to the process.
+  </Card>
+  <Card title="Kill" icon="zap-off" color="red">
+    Forcefully terminate the server process. Use when stop doesn't work.
+  </Card>
+</CardGroup>
+
+### Power Action API
+
+Power actions are sent via WebSocket or HTTP:
+
+```bash
+POST /api/client/servers/{server}/power
+```
+
+<Accordion title="Request Body">
+```json
+{
+  "action": "start" | "stop" | "restart" | "kill"
+}
+```
+</Accordion>
+
+## Terminal Features
+
+The xterm.js terminal includes advanced features:
+
+### Real-Time Logs
+
+- **Live streaming**: Server output appears instantly as it's generated
+- **Color support**: ANSI color codes are properly rendered
+- **5000 lines**: Scrollback buffer stores the last 5000 lines
+- **Auto-scroll**: Terminal automatically scrolls to show new output
+
+### Keyboard Shortcuts
+
+<Tabs>
+  <Tab title="Search">
+    **Ctrl+F** (Cmd+F on Mac)
+    
+    Search through console output:
+    - Enter search term in the prompt
+    - Terminal highlights all matches
+    - Navigate between matches with arrow keys
+  </Tab>
+  
+  <Tab title="Copy">
+    **Ctrl+C** (Cmd+C on Mac)
+    
+    Copy selected text from the terminal:
+    1. Click and drag to select text
+    2. Press Ctrl+C to copy to clipboard
+    3. Selected text is highlighted in yellow
+  </Tab>
+</Tabs>
+
+### Terminal Actions
+
+Use the action buttons in the top-right corner:
+
+<Steps>
+  <Step title="Search" icon="magnifying-glass">
+    Search through console output. Opens a prompt to enter your search term.
+  </Step>
+  
+  <Step title="Clear" icon="trash">
+    Clear the terminal display. Server logs continue streaming but old content is removed.
+  </Step>
+  
+  <Step title="Download" icon="download">
+    Download all console logs as a text file. Useful for debugging or sharing with support.
+    
+    Downloaded file format: `console-logs-{timestamp}.txt`
+  </Step>
+  
+  <Step title="Scroll to Bottom" icon="arrow-down">
+    Jump to the latest console output. Useful when you've scrolled up to read old logs.
+  </Step>
+</Steps>
+
+## Sending Commands
+
+<Note>
+  Command input requires the `control.console` permission. Server owners and admins have this by default.
+</Note>
+
+Type commands in the input field at the bottom of the console:
+
+### Command Input Features
+
+- **Command history**: Press Up/Down arrow keys to cycle through previously sent commands
+- **32 command buffer**: Last 32 commands are saved locally per server
+- **Enter to send**: Press Enter to execute the command
+- **Persistent history**: Commands are stored in localStorage and survive page refreshes
+
+### Example Commands
+
+<CodeGroup>
+```minecraft Minecraft
+say Hello, players!
+whitelist add PlayerName
+op PlayerName
+stop
+```
+
+```rust Rust
+say "Server restarting in 5 minutes"
+ban "PlayerName" "Reason"
+save
+quit
+```
+
+```csgo CS:GO
+changelevel de_dust2
+kick "PlayerName"
+status
+quit
+```
+</CodeGroup>
+
+## Server Statistics
+
+The right sidebar (or bottom panel on mobile) displays real-time server metrics:
+
+### Resource Monitoring
+
+<Accordion title="Available Metrics">
+  - **Status**: Current server state (running, offline, starting, stopping)
+  - **Connection**: WebSocket connection status
+  - **IP:Port**: Primary allocation with copy button
+  - **Uptime**: How long the server has been running (HH:MM:SS)
+  - **CPU Usage**: Current CPU consumption vs limit (e.g., 45.32% / 100%)
+  - **Memory**: RAM usage with visual indicator (e.g., 1.2 GB / 2 GB)
+  - **Disk**: Storage used vs limit (e.g., 3.4 GB / 10 GB)
+  - **Network**: Download/upload transfer (RX/TX in bytes)
+</Accordion>
+
+### Stats Chart
+
+Click the **Stats** button to toggle a real-time performance chart showing:
+
+- CPU usage over time
+- Memory consumption
+- Network activity
+
+The chart updates every few seconds with new data points.
+
+## Connection Status
+
+The console displays connection alerts:
+
+<Warning>
+  **Connection Lost**
+  
+  If the WebSocket disconnects, you'll see an error alert with a **Reconnect** button. This can happen if:
+  - The server or node goes offline
+  - Network interruption occurs
+  - The session expires
+</Warning>
+
+<Info>
+  **Connecting...**
+  
+  Yellow info alert shows while establishing the WebSocket connection. This typically takes 1-2 seconds.
+</Info>
+
+## WebSocket Protocol
+
+The console connects via WebSocket for real-time communication:
+
+```
+GET /api/client/servers/{server}/websocket
+Upgrade: websocket
+```
+
+The WebSocket streams:
+- Server console output (logs)
+- Server status changes
+- Resource statistics updates
+- Token authentication
+
+### Message Types
+
+The WebSocket sends and receives JSON messages:
+
+<CodeGroup>
+```json Server Stats
+{
+  "event": "stats",
+  "args": [
+    {
+      "memory_bytes": 1258291200,
+      "memory_limit_bytes": 2147483648,
+      "cpu_absolute": 45.32,
+      "network_rx_bytes": 1048576,
+      "network_tx_bytes": 524288,
+      "uptime": 3600000,
+      "disk_bytes": 3623878656
+    }
+  ]
+}
+```
+
+```json Console Output
+{
+  "event": "console output",
+  "args": [
+    "[12:00:00 INFO]: Player joined the game"
+  ]
+}
+```
+
+```json Send Command
+{
+  "event": "send command",
+  "args": ["say Hello, world!"]
+}
+```
+</CodeGroup>
+
+## Status Banner
+
+At the top of the console, status banners appear for:
+
+- **Installing**: Server is running its installation script
+- **Transferring**: Server is being moved to another node
+- **Suspended**: Server has been suspended and cannot be started
+- **Node Maintenance**: The Wings node is under maintenance
+
+These banners prevent actions that would fail during special states.
+
+## Permissions
+
+The console respects server permissions:
+
+- **View Console**: `control.console` or server owner/admin
+- **Send Commands**: `control.console` or server owner/admin
+- **Power Actions**: `server.power` or server owner/admin
+
+Subusers without proper permissions will see the console output but cannot send commands or control power.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Console not connecting">
+    - Check if the Wings daemon is running on the server's node
+    - Verify the server is not suspended
+    - Ensure WebSocket connections are not blocked by your firewall
+    - Try clicking the **Reconnect** button
+  </Accordion>
+  
+  <Accordion title="No output appearing">
+    - The server may be offline (check status badge)
+    - The server process may not be generating output
+    - Try clicking **Scroll to Bottom** in case you're viewing old logs
+  </Accordion>
+  
+  <Accordion title="Commands not working">
+    - Verify you have the `control.console` permission
+    - Ensure the server is running (commands only work on running servers)
+    - Check the command syntax for your specific game
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular Monitoring" icon="chart-line">
+    Keep the console open during critical operations to monitor for errors or warnings.
+  </Card>
+  
+  <Card title="Save Important Logs" icon="download">
+    Use the download feature to save logs before restarting or when troubleshooting issues.
+  </Card>
+  
+  <Card title="Graceful Shutdowns" icon="hand">
+    Always use **Stop** instead of **Kill** to allow proper server shutdown and world saving.
+  </Card>
+  
+  <Card title="Check Resource Usage" icon="gauge">
+    Monitor CPU and memory to ensure your server has adequate resources allocated.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="File Management" icon="folder" href="/servers/file-management">
+    Browse and edit server configuration files
+  </Card>
+  <Card title="Schedules" icon="clock" href="/servers/schedules">
+    Automate commands and backups with scheduled tasks
+  </Card>
+</CardGroup>

@@ -1,0 +1,159 @@
+---
+title: 'Update User'
+api: 'PATCH /api/admin/users/:id'
+description: 'Update user account information and settings'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `users:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  User UUID
+</ParamField>
+
+## Request Body
+
+<ParamField body="username" type="string">
+  Username (1-255 characters, trimmed)
+</ParamField>
+
+<ParamField body="email" type="string">
+  Email address (trimmed, must be valid email)
+</ParamField>
+
+<ParamField body="password" type="string">
+  New password (minimum 8 characters)
+</ParamField>
+
+<ParamField body="name" type="string">
+  Full name (max 511 characters, trimmed). Will be split into first and last name.
+</ParamField>
+
+<ParamField body="nameFirst" type="string">
+  First name (max 255 characters, trimmed)
+</ParamField>
+
+<ParamField body="nameLast" type="string">
+  Last name (max 255 characters, trimmed)
+</ParamField>
+
+<ParamField body="language" type="string">
+  Language code (max 10 characters, trimmed)
+</ParamField>
+
+<ParamField body="rootAdmin" type="boolean">
+  Whether user has root admin privileges
+</ParamField>
+
+<ParamField body="role" type="string">
+  User role: `admin` or `user`
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Updated user information
+  
+  <Expandable title="User Object">
+    <ResponseField name="id" type="string">
+      User UUID
+    </ResponseField>
+    
+    <ResponseField name="username" type="string">
+      Username
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string" nullable>
+      Full name
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash Update Email
+curl -X PATCH "https://panel.example.com/api/admin/users/user-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "email": "newemail@example.com"
+  }'
+```
+
+```bash Update Role
+curl -X PATCH "https://panel.example.com/api/admin/users/user-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "role": "admin",
+    "rootAdmin": true
+  }'
+```
+
+```bash Reset Password
+curl -X PATCH "https://panel.example.com/api/admin/users/user-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "password": "NewSecurePassword123!"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "username": "john.doe",
+    "email": "newemail@example.com",
+    "name": "John Doe",
+    "role": "admin",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+</ResponseExample>
+
+## Special Behaviors
+
+### Email Change
+- Email verification status is reset to `null` when email is changed
+- User will need to verify their new email address
+
+### Password Change
+- Password is hashed and stored securely
+- `passwordResetRequired` flag is automatically set to `false`
+- User can immediately log in with the new password
+
+### Name Handling
+- If `name` is provided without `nameFirst`/`nameLast`, it's automatically split
+- First word becomes `nameFirst`, remaining words become `nameLast`
+- You can also provide `nameFirst` and `nameLast` directly for more control
+
+### Role Change
+- Role changes are applied through the auth system
+- Both `role` and `rootAdmin` fields are updated in the database
+
+## Notes
+
+- Only provided fields are updated
+- All updates set the `updatedAt` timestamp
+- Maximum request body size is 16 KB (SMALL size limit)

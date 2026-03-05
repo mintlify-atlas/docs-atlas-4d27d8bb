@@ -1,97 +1,159 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "XyraPanel Documentation"
+description: "Open-source game server management panel built on modern infrastructure"
 ---
 
-## Setting up
+<div style={{ 
+  background: 'linear-gradient(135deg, #db5543 0%, #fab358 100%)',
+  borderRadius: '8px',
+  padding: '48px 32px',
+  marginBottom: '32px',
+  color: '#ffffff'
+}}>
+  <h1 style={{ 
+    fontSize: '48px', 
+    fontWeight: '700', 
+    marginBottom: '16px',
+    color: '#ffffff'
+  }}>
+    XyraPanel
+  </h1>
+  <p style={{ 
+    fontSize: '20px', 
+    marginBottom: '24px',
+    color: '#ffffff',
+    opacity: 0.95
+  }}>
+    A game management panel designed around today's infrastructure and user needs. Compatible with Pterodactyl Wings.
+  </p>
+</div>
 
-Get your documentation site up and running in minutes.
+## Get Started
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Get your XyraPanel instance up and running in minutes.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Installation"
+    icon="rocket"
+    href="/getting-started/installation"
   >
-    Edit your docs locally and preview them in real time.
+    Install XyraPanel with our one-line installer or Docker
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Configuration"
+    icon="gear"
+    href="/getting-started/configuration"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Configure your panel with environment variables and settings
   </Card>
   <Card
-    title="API documentation"
+    title="First Server"
+    icon="server"
+    href="/getting-started/first-server"
+  >
+    Create and manage your first game server
+  </Card>
+  <Card
+    title="Architecture"
+    icon="diagram-project"
+    href="/architecture"
+  >
+    Understand how XyraPanel works under the hood
+  </Card>
+</CardGroup>
+
+## Key Features
+
+Everything you need to manage game servers at scale.
+
+<CardGroup cols={3}>
+  <Card
+    title="Real-time Console"
     icon="terminal"
-    href="/api-reference/introduction"
   >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+    Interact with your servers using xterm.js powered console
   </Card>
   <Card
-    title="Code samples"
+    title="File Management"
+    icon="folder-open"
+  >
+    Edit files with Monaco editor and manage server files
+  </Card>
+  <Card
+    title="Automated Backups"
+    icon="clock"
+  >
+    Schedule automatic backups and manage server schedules
+  </Card>
+  <Card
+    title="User Management"
+    icon="users"
+  >
+    Manage users with 2FA, API keys, and SSH keys
+  </Card>
+  <Card
+    title="Node Management"
+    icon="network-wired"
+  >
+    Deploy servers across multiple nodes and locations
+  </Card>
+  <Card
+    title="Wings Compatible"
+    icon="dove"
+  >
+    Works with Pterodactyl Wings for server management
+  </Card>
+</CardGroup>
+
+## Manage Your Infrastructure
+
+<CardGroup cols={2}>
+  <Card
+    title="Server Management"
+    icon="server"
+    href="/servers/creating-servers"
+  >
+    Create, configure, and manage game servers
+  </Card>
+  <Card
+    title="Administration"
+    icon="screwdriver-wrench"
+    href="/admin/nodes"
+  >
+    Manage nodes, locations, eggs, and resources
+  </Card>
+  <Card
+    title="CLI Tool"
+    icon="terminal"
+    href="/cli/overview"
+  >
+    Deploy and manage with the XyraPanel CLI
+  </Card>
+  <Card
+    title="API Reference"
     icon="code"
-    href="/essentials/code"
+    href="/api/overview"
   >
-    Add sample code to demonstrate how to use your product.
+    Integrate with the XyraPanel REST API
+  </Card>
+</CardGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/xyrapanel/panel"
+  >
+    View the source code and contribute
   </Card>
   <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
+    title="Discord Community"
+    icon="discord"
+    href="https://xyrapanel.com/discord"
   >
-    Display images and other media.
+    Get help and connect with the community
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+</CardGroup>

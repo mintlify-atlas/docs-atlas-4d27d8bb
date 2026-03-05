@@ -1,0 +1,748 @@
+---
+title: "CLI Commands"
+description: "Complete reference for all XyraPanel CLI commands"
+icon: "rectangle-terminal"
+---
+
+## Core Commands
+
+### build
+
+Build the Nuxt application for production deployment.
+
+```bash
+xyra build
+```
+
+This command runs `pnpm run build` to generate the Nitro output in the `.output` directory.
+
+**Example output:**
+
+```
+[xyra] pnpm run build
+Nuxt 3.11.2 with Nitro 2.9.6
+Building Nuxt app...
+✓ Built in 15.2s
+```
+
+---
+
+### deploy
+
+Build the application and deploy it through PM2. This is the recommended way to deploy updates to production.
+
+```bash
+xyra deploy [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env` | string | `env` | PM2 environment block to use (env or env_staging) |
+| `--name` | string | `xyrapanel` | PM2 process name to target |
+| `--ecosystem` | string | `ecosystem.config.cjs` | Path to PM2 ecosystem config |
+| `--skip-build` | boolean | `false` | Skip the build step (use existing artifacts) |
+
+**Behavior:**
+
+1. Runs `pnpm run build` (unless `--skip-build` is set)
+2. Attempts to reload the existing PM2 process
+3. If reload fails, starts a fresh PM2 process
+
+**Examples:**
+
+<Tabs>
+  <Tab title="Default deployment">
+    ```bash
+    xyra deploy
+    ```
+    Builds and deploys to production using default settings.
+  </Tab>
+  <Tab title="Staging deployment">
+    ```bash
+    xyra deploy --env env_staging --name xyrapanel-staging
+    ```
+    Deploys to staging environment with a different process name.
+  </Tab>
+  <Tab title="Skip build">
+    ```bash
+    xyra deploy --skip-build
+    ```
+    Useful when you've already built the app and just want to reload PM2.
+  </Tab>
+  <Tab title="Custom ecosystem">
+    ```bash
+    xyra deploy --ecosystem ./config/pm2.config.cjs
+    ```
+    Use a custom PM2 ecosystem configuration file.
+  </Tab>
+</Tabs>
+
+**Example output:**
+
+```
+[xyra] pnpm run build
+✓ Built in 12.4s
+[xyra] Reloading PM2 process: xyrapanel
+[xyra] pm2 reload xyrapanel --env env --update-env
+✓ Reloaded existing PM2 process
+```
+
+---
+
+## PM2 Commands
+
+The `pm2` command provides a suite of process management operations.
+
+### pm2 start
+
+Start the PM2 process using the ecosystem configuration.
+
+```bash
+xyra pm2 start [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env` | string | `env` | PM2 environment block |
+| `--name` | string | `xyrapanel` | PM2 process name |
+| `--ecosystem` | string | `ecosystem.config.cjs` | Path to ecosystem config |
+
+**Example:**
+
+```bash
+xyra pm2 start --env env_staging
+```
+
+---
+
+### pm2 reload
+
+Reload the running PM2 process with zero-downtime.
+
+```bash
+xyra pm2 reload [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env` | string | `env` | PM2 environment block |
+| `--name` | string | `xyrapanel` | PM2 process name |
+
+**Example:**
+
+```bash
+xyra pm2 reload
+```
+
+<Tip>
+  Use `reload` instead of `restart` for zero-downtime deployments in cluster mode.
+</Tip>
+
+---
+
+### pm2 restart
+
+Restart the PM2 process.
+
+```bash
+xyra pm2 restart [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env` | string | `env` | PM2 environment block |
+| `--name` | string | `xyrapanel` | PM2 process name |
+
+**Example:**
+
+```bash
+xyra pm2 restart --name xyrapanel
+```
+
+---
+
+### pm2 stop
+
+Stop the PM2 process.
+
+```bash
+xyra pm2 stop [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | `xyrapanel` | PM2 process name |
+
+**Example:**
+
+```bash
+xyra pm2 stop
+```
+
+---
+
+### pm2 delete
+
+Delete the PM2 process and its metadata.
+
+```bash
+xyra pm2 delete [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | `xyrapanel` | PM2 process name |
+
+**Example:**
+
+```bash
+xyra pm2 delete --name xyrapanel
+```
+
+<Warning>
+  This permanently removes the process from PM2. You'll need to use `pm2 start` to run it again.
+</Warning>
+
+---
+
+### pm2 status
+
+Show the PM2 status table for all processes or a specific process.
+
+```bash
+xyra pm2 status [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | _(empty)_ | Optionally filter to a single process |
+
+**Examples:**
+
+<Tabs>
+  <Tab title="All processes">
+    ```bash
+    xyra pm2 status
+    ```
+    Shows status for all PM2 processes.
+  </Tab>
+  <Tab title="Specific process">
+    ```bash
+    xyra pm2 status --name xyrapanel
+    ```
+    Shows status for only the xyrapanel process.
+  </Tab>
+</Tabs>
+
+**Example output:**
+
+```
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ status   │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┤
+│ 0  │ xyrapanel      │ default     │ 1.0.0   │ cluster │ online   │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┘
+```
+
+---
+
+### pm2 logs
+
+Tail PM2 logs for the specified process.
+
+```bash
+xyra pm2 logs [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | `xyrapanel` | PM2 process name |
+| `--lines` | number | `50` | Number of lines to show before tailing |
+| `--timestamp` | boolean | `false` | Show timestamps for each log line |
+
+**Examples:**
+
+<Tabs>
+  <Tab title="Basic logs">
+    ```bash
+    xyra pm2 logs
+    ```
+    Tail logs with default 50 lines of history.
+  </Tab>
+  <Tab title="More history">
+    ```bash
+    xyra pm2 logs --lines 200
+    ```
+    Show 200 lines of history before tailing.
+  </Tab>
+  <Tab title="With timestamps">
+    ```bash
+    xyra pm2 logs --timestamp
+    ```
+    Include timestamps in log output.
+  </Tab>
+</Tabs>
+
+**Example output:**
+
+```
+[TAILING] Tailing last 50 lines for [xyrapanel] process
+
+0|xyrapanel  | Server listening on http://localhost:3000
+0|xyrapanel  | Nitro 2.9.6
+0|xyrapanel  | Local:    http://localhost:3000
+```
+
+---
+
+### pm2 paste-logs
+
+Upload recent PM2 logs to the XyraPanel paste service for easy sharing.
+
+```bash
+xyra pm2 paste-logs [options]
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--name` | string | `xyrapanel` | PM2 process name |
+| `--lines` | number | `400` | Lines to pull from PM2 logs |
+| `--stream` | string | `both` | Stream to include: `both`, `out`, or `err` |
+| `--source` | string | _(empty)_ | Optional host label (e.g., node-04) |
+| `--expires` | string | `1d` | Paste expiration: `10m`, `1h`, `6h`, `1d`, `7d`, `never` |
+
+**Examples:**
+
+<Tabs>
+  <Tab title="Basic paste">
+    ```bash
+    xyra pm2 paste-logs
+    ```
+    Upload last 400 lines with 1-day expiration.
+  </Tab>
+  <Tab title="Only errors">
+    ```bash
+    xyra pm2 paste-logs --stream err --lines 1000
+    ```
+    Upload only error logs, 1000 lines.
+  </Tab>
+  <Tab title="With source label">
+    ```bash
+    xyra pm2 paste-logs --source node-04 --expires 7d
+    ```
+    Label the paste with server name, keep for 7 days.
+  </Tab>
+  <Tab title="Long-term paste">
+    ```bash
+    xyra pm2 paste-logs --expires never
+    ```
+    Create a paste that never expires.
+  </Tab>
+</Tabs>
+
+**Example output:**
+
+```
+[xyra] Collecting PM2 logs for xyrapanel
+[xyra] Uploading logs to paste service: https://paste.xyrapanel.com/api/pastes
+✓ Paste created
+https://paste.xyrapanel.com/abc123xyz
+```
+
+<Tip>
+  Use `paste-logs` when reporting issues to easily share logs with the support team.
+</Tip>
+
+---
+
+## Nuxt Commands
+
+Nuxt development and build helpers.
+
+### nuxt dev
+
+Start the Nuxt development server with hot module replacement.
+
+```bash
+xyra nuxt dev
+```
+
+This starts a local development server at `http://localhost:3000` with:
+- Hot module replacement (HMR)
+- Auto-imports
+- TypeScript support
+- Vue DevTools
+
+**Example output:**
+
+```
+Nuxt 3.11.2 with Nitro 2.9.6
+
+  ➜ Local:    http://localhost:3000/
+  ➜ Network:  use --host to expose
+
+ℹ Using Nitro server preset: node
+ℹ Building client...
+✓ Client built in 2.1s
+ℹ Building server...
+✓ Server built in 1.8s
+```
+
+---
+
+### nuxt preview
+
+Preview the production build locally.
+
+```bash
+xyra nuxt preview
+```
+
+This serves the built application from the `.output` directory.
+
+---
+
+### nuxt generate
+
+Generate a static site output.
+
+```bash
+xyra nuxt generate
+```
+
+Pre-renders all routes and generates static HTML files.
+
+---
+
+## Linting & Formatting
+
+### lint
+
+Run oxlint code quality checks.
+
+```bash
+xyra lint
+```
+
+Performs linting without making changes.
+
+---
+
+### lint fix
+
+Run oxlint with automatic fixes.
+
+```bash
+xyra lint fix
+```
+
+Automatically fixes linting issues where possible.
+
+**Example:**
+
+```bash
+xyra lint fix
+```
+
+---
+
+### lint type-aware
+
+Run type-aware linting (slower but more comprehensive).
+
+```bash
+xyra lint type-aware
+```
+
+Enables advanced linting rules that require type information.
+
+---
+
+### lint type-check
+
+Run both type-aware linting and TypeScript type checking.
+
+```bash
+xyra lint type-check
+```
+
+Performs the most thorough code quality check.
+
+---
+
+### fmt
+
+Format codebase with oxfmt.
+
+```bash
+xyra fmt
+```
+
+Formats all supported files in the project.
+
+---
+
+### fmt check
+
+Verify formatting without making changes.
+
+```bash
+xyra fmt check
+```
+
+Useful in CI pipelines to ensure code is properly formatted.
+
+**Example:**
+
+```bash
+xyra fmt check
+```
+
+---
+
+## Testing
+
+### test
+
+Run Vitest test suite.
+
+```bash
+xyra test
+```
+
+Runs all tests once.
+
+---
+
+### test watch
+
+Run Vitest in watch mode.
+
+```bash
+xyra test watch
+```
+
+Automatically re-runs tests when files change.
+
+**Example:**
+
+```bash
+xyra test watch
+```
+
+---
+
+### test coverage
+
+Run tests with coverage reporting.
+
+```bash
+xyra test coverage
+```
+
+Generates code coverage reports showing which lines are tested.
+
+**Example output:**
+
+```
+ Test Files  12 passed (12)
+      Tests  87 passed (87)
+   Start at  10:23:45
+   Duration  3.21s
+
+ % Coverage report from v8
+--------------------|---------|----------|---------|---------|-------------------
+File                | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+--------------------|---------|----------|---------|---------|-------------------
+All files           |   92.45 |    88.21 |   94.73 |   92.45 |
+```
+
+---
+
+## Database
+
+Drizzle ORM schema management commands.
+
+### db generate
+
+Generate new database migrations based on schema changes.
+
+```bash
+xyra db generate
+```
+
+Analyzes your Drizzle schema and creates migration files in the migrations directory.
+
+**Example:**
+
+```bash
+xyra db generate
+```
+
+---
+
+### db push
+
+Push schema changes directly to the database.
+
+```bash
+xyra db push
+```
+
+<Warning>
+  Use `db push` in development only. For production, generate migrations and apply them through your deployment pipeline.
+</Warning>
+
+**Example:**
+
+```bash
+xyra db push
+```
+
+---
+
+## PWA
+
+### pwa
+
+Generate Progressive Web App assets (icons, splash screens, etc.).
+
+```bash
+xyra pwa
+```
+
+Creates all required PWA assets from your source icon.
+
+**Example:**
+
+```bash
+xyra pwa
+```
+
+**Example output:**
+
+```
+✓ Generated PWA icons
+✓ Generated splash screens
+✓ Updated manifest.json
+```
+
+---
+
+## Command Chaining
+
+While the CLI doesn't directly support command chaining, you can use shell operators:
+
+**Sequential execution:**
+
+```bash
+xyra build && xyra deploy --skip-build
+```
+
+**Parallel execution:**
+
+```bash
+xyra lint & xyra test
+```
+
+---
+
+## Exit Codes
+
+The CLI uses standard exit codes:
+
+- `0` - Success
+- `1` - Error (check console output for details)
+
+---
+
+## Environment Variables
+
+The CLI respects these environment variables:
+
+- `NODE_ENV` - Node environment (development, production, etc.)
+- Standard PM2 environment variables
+
+---
+
+## Troubleshooting
+
+### Command not found
+
+If you get `xyra: command not found`:
+
+```bash
+pnpm link --global
+```
+
+### PM2 not found
+
+Install PM2 globally:
+
+```bash
+npm install -g pm2
+```
+
+### Ecosystem file not found
+
+Ensure your ecosystem configuration exists:
+
+```bash
+ls ecosystem.config.cjs
+```
+
+Or specify a custom path:
+
+```bash
+xyra deploy --ecosystem ./path/to/config.cjs
+```
+
+### Build failures
+
+Check Node.js version:
+
+```bash
+node --version  # Should be 18+
+```
+
+Clear cache and rebuild:
+
+```bash
+rm -rf .nuxt .output node_modules
+pnpm install
+xyra build
+```
+
+---
+
+## Getting Help
+
+For any command, append `--help` to see detailed usage:
+
+```bash
+xyra --help
+xyra deploy --help
+xyra pm2 logs --help
+```
+
+<Note>
+  The CLI is built with **citty** for parsing and **consola** for logging, providing a consistent and beautiful command-line experience.
+</Note>

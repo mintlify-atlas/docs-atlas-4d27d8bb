@@ -1,0 +1,206 @@
+---
+title: 'WebSocket Console'
+description: 'Establish a WebSocket connection to the server console for real-time interaction'
+api: 'GET /api/client/servers/:server/websocket'
+---
+
+Retrieve WebSocket credentials to connect to a server's console. This endpoint returns a JWT token and WebSocket URL that can be used to establish a real-time connection to the server's console output and input.
+
+## Authentication
+
+Requires a valid session token and the `websocket.connect` permission on the specified server.
+
+## Path Parameters
+
+<ParamField path="server" type="string" required>
+  Server identifier (short identifier or UUID)
+</ParamField>
+
+## Response
+
+### Success Response
+
+<ResponseField name="token" type="string" required>
+  JWT authentication token for the WebSocket connection. This token is valid for 15 minutes (900 seconds).
+</ResponseField>
+
+<ResponseField name="socket" type="string" required>
+  WebSocket URL to connect to. The URL format is:
+  - `wss://` for HTTPS nodes
+  - `ws://` for HTTP nodes
+  
+  Example: `wss://node.example.com:8080/api/servers/{uuid}/ws`
+</ResponseField>
+
+### Unavailable Response
+
+If the server is not available on the Wings node, an alternative response structure is returned:
+
+<ResponseField name="unavailable" type="boolean">
+  Set to `true` when the server is unavailable
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable explanation of why the server is unavailable
+</ResponseField>
+
+<ResponseField name="diagnostics" type="object">
+  Diagnostic information for troubleshooting
+  <Expandable title="Diagnostics">
+    <ResponseField name="error" type="string">
+      Error message from the Wings daemon
+    </ResponseField>
+    <ResponseField name="serverUuid" type="string">
+      UUID of the server that's unavailable
+    </ResponseField>
+    <ResponseField name="serverIdentifier" type="string | null">
+      Server identifier
+    </ResponseField>
+    <ResponseField name="nodeId" type="string | null">
+      ID of the Wings node
+    </ResponseField>
+    <ResponseField name="serverStatus" type="string | null">
+      Last known server status
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET "https://panel.example.com/api/client/servers/my-server/websocket" \
+  -H "Cookie: session=your-session-token"
+```
+
+## Example Success Response
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXIiOnsidXVpZCI6ImExYjJjM2Q0LWU1ZjYtNzg5MC1hYmNkLWVmMTIzNDU2Nzg5MCJ9LCJ1c2VyIjp7ImlkIjoidXNlci00NTYiLCJ1dWlkIjoidXNlci00NTYifSwicGVybWlzc2lvbnMiOlsiKiJdLCJpZGVudGlmaWVkQnkiOiJ1c2VyLTQ1NjphMWIyYzNkNC1lNWY2LTc4OTAtYWJjZC1lZjEyMzQ1Njc4OTAiLCJpYXQiOjE3MDk2MzcyMDAsImV4cCI6MTcwOTYzODEwMH0.signature",
+  "socket": "wss://node.example.com:8080/api/servers/a1b2c3d4-e5f6-7890-abcd-ef1234567890/ws"
+}
+```
+
+## Example Unavailable Response
+
+```json
+{
+  "unavailable": true,
+  "message": "Server is not available on the assigned Wings node",
+  "diagnostics": {
+    "error": "404: The requested resource does not exist on this instance",
+    "serverUuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "serverIdentifier": "my-server",
+    "nodeId": "node-123",
+    "serverStatus": "offline"
+  }
+}
+```
+
+## Using the WebSocket Connection
+
+Once you have the token and socket URL, you can establish a WebSocket connection:
+
+```javascript
+const ws = new WebSocket(`${socket}?token=${token}`);
+
+ws.onopen = () => {
+  console.log('Connected to server console');
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Console output:', data);
+};
+
+ws.onerror = (error) => {
+  console.error('WebSocket error:', error);
+};
+
+ws.onclose = () => {
+  console.log('Disconnected from server console');
+};
+
+// Send a command to the server
+ws.send(JSON.stringify({
+  event: 'send command',
+  args: ['say Hello from the API!']
+}));
+```
+
+## WebSocket Events
+
+The WebSocket connection supports various event types:
+
+### Incoming Events (Server to Client)
+
+- **console output** - Real-time console output from the server
+- **stats** - Server resource statistics (CPU, memory, disk, network)
+- **status** - Server status changes (starting, running, stopping, offline)
+- **daemon message** - Messages from the Wings daemon
+
+### Outgoing Events (Client to Server)
+
+- **send command** - Execute a command on the server console
+- **send logs** - Request historical console logs
+- **set state** - Request a power state change
+
+## Token Expiration
+
+The JWT token is valid for 15 minutes (900 seconds). After expiration, the WebSocket connection will be terminated, and you'll need to request a new token.
+
+<Info>
+  The token includes full permissions (`["*"]`) to allow the WebSocket client to interact with all server functions through the console connection.
+</Info>
+
+## Error Responses
+
+<ResponseField name="400" type="Bad Request">
+  Missing or invalid server identifier
+  ```json
+  {
+    "status": 400,
+    "message": "Missing server identifier"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User lacks `websocket.connect` permission
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Server not found or user does not have access
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Node configuration error
+  ```json
+  {
+    "status": 500,
+    "message": "Node not available: Server has no resolved Wings node"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="502" type="Bad Gateway">
+  Failed to prepare WebSocket session with Wings daemon
+  ```json
+  {
+    "status": 502,
+    "message": "Failed to prepare websocket session: Connection refused"
+  }
+  ```
+</ResponseField>
+
+## Security Considerations
+
+<Warning>
+  The WebSocket token grants full console access to the server. Keep tokens secure and never expose them in client-side code or logs.
+</Warning>
+
+- Tokens are signed using the Wings node's token secret
+- Each token is tied to a specific user and server
+- Tokens automatically expire after 15 minutes
+- The connection is identified by a combination of user ID and server UUID
+- All WebSocket activity can be monitored and logged by administrators

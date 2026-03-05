@@ -1,0 +1,528 @@
+---
+title: Schedules
+description: Automate server tasks with cron-based schedules and task chains
+icon: 'clock'
+---
+
+## Overview
+
+Schedules allow you to automate repetitive tasks on your game server using cron expressions. Create scheduled backups, automated restarts, timed announcements, and complex task chains that execute in sequence.
+
+## Accessing Schedules
+
+Navigate to your server's schedule management:
+
+```
+/server/{server-identifier}/schedules
+```
+
+The schedules page displays all configured schedules with their status, next run time, and associated tasks.
+
+## Creating a Schedule
+
+<Steps>
+  <Step title="Click New Schedule">
+    Click the **New Schedule** button in the top-right corner.
+  </Step>
+  
+  <Step title="Configure Schedule">
+    Fill in the schedule details:
+    
+    - **Schedule Name**: Descriptive name (e.g., "Daily Restart")
+    - **Cron Expression**: When to run (see Cron Timing below)
+    - **Enabled**: Whether the schedule is active
+  </Step>
+  
+  <Step title="Set Timing">
+    Use the cron fields or quick presets to define when the schedule runs.
+  </Step>
+  
+  <Step title="Create Schedule">
+    Click **Create** to save the schedule. You can then add tasks to it.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/schedules
+```
+
+<Accordion title="Request Body Example">
+```json
+{
+  "name": "Daily Restart",
+  "cron": {
+    "minute": "0",
+    "hour": "4",
+    "day_of_month": "*",
+    "month": "*",
+    "day_of_week": "*"
+  },
+  "is_active": true
+}
+```
+</Accordion>
+
+## Cron Timing
+
+Schedules use standard cron syntax with 5 fields:
+
+```
+Minute Hour DayOfMonth Month DayOfWeek
+```
+
+### Cron Fields
+
+<Tabs>
+  <Tab title="Minute">
+    **0-59**: Minute of the hour
+    
+    Examples:
+    - `0` = Top of the hour
+    - `30` = Half past the hour
+    - `*/5` = Every 5 minutes
+    - `*` = Every minute
+  </Tab>
+  
+  <Tab title="Hour">
+    **0-23**: Hour of the day (24-hour format)
+    
+    Examples:
+    - `0` = Midnight
+    - `12` = Noon
+    - `*/2` = Every 2 hours
+    - `*` = Every hour
+  </Tab>
+  
+  <Tab title="Day of Month">
+    **1-31**: Day of the month
+    
+    Examples:
+    - `1` = First day of month
+    - `15` = 15th of month
+    - `*/7` = Every 7 days
+    - `*` = Every day
+  </Tab>
+  
+  <Tab title="Month">
+    **1-12**: Month of the year
+    
+    Examples:
+    - `1` = January
+    - `6` = June
+    - `*/3` = Every 3 months
+    - `*` = Every month
+  </Tab>
+  
+  <Tab title="Day of Week">
+    **0-6**: Day of the week (0 = Sunday)
+    
+    Examples:
+    - `0` = Sunday
+    - `1` = Monday
+    - `5` = Friday
+    - `*` = Every day
+  </Tab>
+</Tabs>
+
+### Quick Presets
+
+Use the preset buttons for common schedules:
+
+<CardGroup cols={3}>
+  <Card title="Every Minute">
+    ```
+    * * * * *
+    ```
+  </Card>
+  
+  <Card title="Every 5 Minutes">
+    ```
+    */5 * * * *
+    ```
+  </Card>
+  
+  <Card title="Every Hour">
+    ```
+    0 * * * *
+    ```
+  </Card>
+  
+  <Card title="Daily at Midnight">
+    ```
+    0 0 * * *
+    ```
+  </Card>
+  
+  <Card title="Weekly on Sunday">
+    ```
+    0 0 * * 0
+    ```
+  </Card>
+</CardGroup>
+
+### Example Cron Expressions
+
+<Accordion title="Common Schedules">
+  - `0 4 * * *` = Daily at 4:00 AM
+  - `0 */6 * * *` = Every 6 hours
+  - `30 2 * * 0` = Every Sunday at 2:30 AM
+  - `0 0 1 * *` = First day of every month at midnight
+  - `*/30 * * * *` = Every 30 minutes
+  - `0 6 * * 1-5` = Weekdays at 6:00 AM
+</Accordion>
+
+## Schedule Tasks
+
+Each schedule can have multiple tasks that execute in sequence. Tasks run in order based on their sequence ID with optional time offsets.
+
+### Task Types
+
+Schedules support three types of tasks:
+
+<Tabs>
+  <Tab title="Command">
+    Execute a console command:
+    
+    - **Action**: `command`
+    - **Payload**: The command to run (e.g., `say Server restarting in 5 minutes`)
+    - **Example use**: Announcements, world saves, custom commands
+  </Tab>
+  
+  <Tab title="Power">
+    Control server power state:
+    
+    - **Action**: `power`
+    - **Payload**: One of `start`, `stop`, `restart`, `kill`
+    - **Example use**: Automated restarts, scheduled shutdowns
+  </Tab>
+  
+  <Tab title="Backup">
+    Create a server backup:
+    
+    - **Action**: `backup`
+    - **Payload**: Backup name (optional)
+    - **Example use**: Scheduled backups before maintenance
+  </Tab>
+</Tabs>
+
+### Adding Tasks
+
+<Steps>
+  <Step title="Open Task Manager">
+    Click **Manage Tasks** on a schedule to open the task management modal.
+  </Step>
+  
+  <Step title="Choose Action Type">
+    Select **Command**, **Power**, or **Backup** from the action buttons.
+  </Step>
+  
+  <Step title="Configure Task">
+    Fill in the task details:
+    
+    - **Payload**: Command text, power action, or backup name
+    - **Time Offset**: Seconds to wait before executing (0-3600)
+    - **Continue on Failure**: Whether to continue if this task fails
+  </Step>
+  
+  <Step title="Add Task">
+    Click **Add Task** to add it to the schedule.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/schedules/{schedule}/tasks
+```
+
+<Accordion title="Request Body Examples">
+```json Command Task
+{
+  "action": "command",
+  "payload": "say Server will restart in 5 minutes!",
+  "time_offset": 0,
+  "continue_on_failure": false
+}
+```
+
+```json Power Task
+{
+  "action": "power",
+  "payload": "restart",
+  "time_offset": 300,
+  "continue_on_failure": true
+}
+```
+
+```json Backup Task
+{
+  "action": "backup",
+  "payload": "scheduled-backup",
+  "time_offset": 0,
+  "continue_on_failure": false
+}
+```
+</Accordion>
+
+### Task Execution Order
+
+Tasks execute sequentially in order of their **Sequence ID**:
+
+1. **Sequence ID #1** executes at schedule trigger time
+2. Wait for Task #1's time offset
+3. Execute Task #1
+4. If `continue_on_failure` is false and task fails, stop here
+5. Wait for Task #2's time offset
+6. Execute Task #2
+7. Continue until all tasks complete
+
+### Time Offsets
+
+Time offsets delay task execution:
+
+- **0 seconds**: Execute immediately
+- **60 seconds**: Wait 1 minute before executing
+- **300 seconds**: Wait 5 minutes
+- **3600 seconds**: Wait 1 hour (maximum)
+
+Example sequence:
+```
+Task #1: Command "say Restart in 5 minutes" | Offset: 0s
+Task #2: Command "say Restart in 1 minute" | Offset: 240s
+Task #3: Power "restart" | Offset: 60s
+```
+
+This announces 5 minutes before restart, then 1 minute before, then restarts.
+
+## Example Schedules
+
+### Daily Restart with Warnings
+
+<Steps>
+  <Step title="Create Schedule">
+    - **Name**: Daily Restart
+    - **Cron**: `0 4 * * *` (4 AM daily)
+  </Step>
+  
+  <Step title="Add Tasks">
+    1. Command: `say Server restarting in 5 minutes for maintenance` (offset: 0s)
+    2. Command: `say Server restarting in 1 minute! Save your progress!` (offset: 240s)
+    3. Power: `restart` (offset: 60s)
+  </Step>
+</Steps>
+
+### Hourly Backups
+
+<Steps>
+  <Step title="Create Schedule">
+    - **Name**: Hourly Backup
+    - **Cron**: `0 * * * *` (Every hour)
+  </Step>
+  
+  <Step title="Add Task">
+    1. Backup: `hourly-backup-{timestamp}` (offset: 0s)
+  </Step>
+</Steps>
+
+### Weekly Maintenance
+
+<Steps>
+  <Step title="Create Schedule">
+    - **Name**: Weekly Maintenance
+    - **Cron**: `0 3 * * 0` (Sundays at 3 AM)
+  </Step>
+  
+  <Step title="Add Tasks">
+    1. Command: `save-all` (offset: 0s)
+    2. Backup: `weekly-maintenance` (offset: 30s)
+    3. Command: `say Server will be down for 10 minutes for maintenance` (offset: 30s)
+    4. Power: `stop` (offset: 60s)
+    5. Power: `start` (offset: 600s) — continues on failure
+  </Step>
+</Steps>
+
+## Managing Schedules
+
+### Edit Schedule
+
+1. Click the **Edit** button on a schedule
+2. Modify the name, cron expression, or enabled status
+3. Click **Save**
+
+API: `POST /api/client/servers/{server}/schedules/{schedule}`
+
+### Force Run
+
+Manually trigger a schedule:
+
+1. Click the **Force Run** button
+2. All tasks execute immediately regardless of cron timing
+3. Useful for testing schedules
+
+API: `POST /api/client/servers/{server}/schedules/{schedule}/run`
+
+### Delete Schedule
+
+<Warning>
+  Deleting a schedule permanently removes it and all associated tasks. This cannot be undone.
+</Warning>
+
+1. Click the **Delete** button
+2. Confirm deletion in the modal
+3. Schedule and all tasks are removed
+
+API: `DELETE /api/client/servers/{server}/schedules/{schedule}`
+
+## Schedule Status
+
+Schedules display their current status:
+
+<CardGroup cols={2}>
+  <Card title="Enabled" color="blue">
+    Schedule is active and will run at the next scheduled time.
+  </Card>
+  
+  <Card title="Paused" color="yellow">
+    Schedule is disabled and will not run until re-enabled.
+  </Card>
+</CardGroup>
+
+### Schedule Information
+
+Each schedule shows:
+
+- **Cron Expression**: The timing pattern
+- **Task Count**: Number of configured tasks
+- **Next Run**: When the schedule will next execute
+- **Last Run**: When the schedule last executed
+
+## Task Management
+
+### Editing Tasks
+
+Tasks cannot be edited directly. To modify a task:
+
+1. Delete the existing task
+2. Create a new task with updated settings
+
+### Deleting Tasks
+
+1. Open **Manage Tasks** for the schedule
+2. Click the trash icon next to a task
+3. Confirm deletion
+4. Task is removed from the sequence
+
+API: `DELETE /api/client/servers/{server}/schedules/{schedule}/tasks/{task}`
+
+### Reordering Tasks
+
+Tasks execute in sequence order (Sequence ID). To reorder:
+
+1. Delete tasks you want to reorder
+2. Re-create them in the desired order
+3. Tasks are automatically assigned sequential IDs
+
+## Permissions
+
+Schedule management requires:
+
+- **View schedules**: `server.schedule.read`
+- **Create schedules**: `server.schedule.create`
+- **Edit schedules**: `server.schedule.update`
+- **Delete schedules**: `server.schedule.delete`
+- **Manage tasks**: `server.schedule.update`
+
+Server owners and admins have all permissions by default.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test First" icon="flask">
+    Use **Force Run** to test schedules before relying on them for important tasks.
+  </Card>
+  
+  <Card title="Add Warnings" icon="triangle-exclamation">
+    For restart schedules, announce ahead of time so players can prepare.
+  </Card>
+  
+  <Card title="Use Continue on Failure" icon="forward">
+    Enable for power actions so later tasks still execute if one fails.
+  </Card>
+  
+  <Card title="Stagger Backups" icon="clock">
+    Don't schedule all servers' backups at the same time to avoid performance issues.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Schedule not running">
+    - Check that the schedule is **Enabled** (not paused)
+    - Verify the cron expression is correct
+    - Ensure the schedule has at least one task
+    - Check server logs for execution errors
+  </Accordion>
+  
+  <Accordion title="Tasks executing in wrong order">
+    - Tasks run by sequence ID, which is assigned in creation order
+    - Delete and recreate tasks in the correct order if needed
+  </Accordion>
+  
+  <Accordion title="Command task not working">
+    - Verify the command syntax is correct for your game
+    - Check server console for command output/errors
+    - Ensure the server is running when the command executes
+  </Accordion>
+</AccordionGroup>
+
+## API Reference
+
+### List Schedules
+
+```bash
+GET /api/client/servers/{server}/schedules
+```
+
+<Accordion title="Response Example">
+```json
+{
+  "data": [
+    {
+      "id": "schedule-uuid",
+      "name": "Daily Restart",
+      "cron": "0 4 * * *",
+      "is_active": true,
+      "is_processing": false,
+      "only_when_online": false,
+      "last_run_at": "2024-01-15T04:00:00Z",
+      "next_run_at": "2024-01-16T04:00:00Z",
+      "created_at": "2024-01-10T12:00:00Z",
+      "updated_at": "2024-01-10T12:00:00Z",
+      "tasks": [
+        {
+          "id": "task-uuid",
+          "sequence_id": 1,
+          "action": "command",
+          "payload": "say Restarting soon",
+          "time_offset": 0,
+          "continue_on_failure": false,
+          "is_queued": false
+        }
+      ]
+    }
+  ]
+}
+```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Backups" icon="archive" href="/servers/backups">
+    Learn about manual and automated server backups
+  </Card>
+  <Card title="Server Console" icon="terminal" href="/servers/server-console">
+    Monitor schedule execution in the real-time console
+  </Card>
+</CardGroup>

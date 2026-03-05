@@ -1,0 +1,190 @@
+---
+title: 'Get Server Details'
+description: 'Retrieve detailed information about a specific server'
+api: 'GET /api/client/servers/:server'
+---
+
+Retrieves comprehensive details about a specific server, including resource limits, allocations, permissions, and current status.
+
+## Authentication
+
+Requires a valid session token and the `server.view` permission on the specified server.
+
+## Path Parameters
+
+<ParamField path="server" type="string" required>
+  Server identifier (short identifier or UUID)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Server details object
+  <Expandable title="PanelServerDetails">
+    <ResponseField name="id" type="string" required>
+      Internal database ID of the server
+    </ResponseField>
+    <ResponseField name="uuid" type="string" required>
+      Unique identifier for the server
+    </ResponseField>
+    <ResponseField name="identifier" type="string" required>
+      Short identifier used in URLs
+    </ResponseField>
+    <ResponseField name="name" type="string" required>
+      Display name of the server
+    </ResponseField>
+    <ResponseField name="description" type="string | null">
+      Server description
+    </ResponseField>
+    <ResponseField name="status" type="string | null">
+      Current server status: `offline`, `starting`, `running`, `stopping`, or `stopped`
+    </ResponseField>
+    <ResponseField name="suspended" type="boolean" required>
+      Whether the server is currently suspended
+    </ResponseField>
+    <ResponseField name="node" type="object" required>
+      Information about the Wings node hosting this server
+      <Expandable title="Node">
+        <ResponseField name="id" type="string | null">
+          Node ID
+        </ResponseField>
+        <ResponseField name="name" type="string | null">
+          Node display name
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="limits" type="object" required>
+      Server resource limits
+      <Expandable title="Limits">
+        <ResponseField name="memory" type="number | null">
+          Memory limit in megabytes
+        </ResponseField>
+        <ResponseField name="disk" type="number | null">
+          Disk limit in megabytes
+        </ResponseField>
+        <ResponseField name="cpu" type="number | null">
+          CPU limit in percentage (100 = 1 core)
+        </ResponseField>
+        <ResponseField name="swap" type="number | null">
+          Swap memory limit (reserved for future use)
+        </ResponseField>
+        <ResponseField name="io" type="number | null">
+          IO weight/priority
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="createdAt" type="string" required>
+      ISO 8601 timestamp of when the server was created
+    </ResponseField>
+    <ResponseField name="allocations" type="object" required>
+      Network allocations for the server
+      <Expandable title="Allocations">
+        <ResponseField name="primary" type="object | null">
+          Primary network allocation
+          <Expandable title="Allocation">
+            <ResponseField name="ip" type="string">
+              IP address
+            </ResponseField>
+            <ResponseField name="port" type="number">
+              Port number
+            </ResponseField>
+            <ResponseField name="description" type="string">
+              Allocation description or notes
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="additional" type="array">
+          Array of additional network allocations with the same structure as primary
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="owner" type="object" required>
+      Information about the server owner
+      <Expandable title="Owner">
+        <ResponseField name="id" type="string | null">
+          Owner user ID
+        </ResponseField>
+        <ResponseField name="username" type="string | null">
+          Owner username
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="permissions" type="array">
+      Array of permission strings the current user has on this server
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET "https://panel.example.com/api/client/servers/my-server" \
+  -H "Cookie: session=your-session-token"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "identifier": "my-server",
+    "name": "My Game Server",
+    "description": "Production Minecraft server",
+    "status": "running",
+    "suspended": false,
+    "node": {
+      "id": "node-123",
+      "name": "US-East-1"
+    },
+    "limits": {
+      "memory": 4096,
+      "disk": 10240,
+      "cpu": 200,
+      "swap": null,
+      "io": 500
+    },
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "allocations": {
+      "primary": {
+        "ip": "192.168.1.100",
+        "port": 25565,
+        "description": "Main game port"
+      },
+      "additional": [
+        {
+          "ip": "192.168.1.100",
+          "port": 25575,
+          "description": "RCON port"
+        }
+      ]
+    },
+    "owner": {
+      "id": "user-456",
+      "username": "john_doe"
+    },
+    "permissions": [
+      "server.view",
+      "server.console",
+      "server.power",
+      "server.files.read",
+      "server.files.write"
+    ]
+  }
+}
+```
+
+## Error Responses
+
+<ResponseField name="400" type="Bad Request">
+  Server identifier is missing or invalid
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have the `server.view` permission
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Server not found or user does not have access
+</ResponseField>

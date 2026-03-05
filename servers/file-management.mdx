@@ -1,0 +1,467 @@
+---
+title: File Management
+description: Browse, edit, and manage server files with the integrated file browser and Monaco editor
+icon: 'folder-open'
+---
+
+## Overview
+
+XyraPanel includes a powerful file management system that lets you browse directories, edit configuration files, upload/download files, and manage permissions—all through your browser without needing FTP or SFTP access.
+
+## File Browser
+
+Access your server's files at:
+
+```
+/server/{server-identifier}/files
+```
+
+The file browser displays:
+- Directories and files in the current location
+- File sizes, permissions, and modification dates
+- Breadcrumb navigation showing your current path
+- Quick actions toolbar
+
+### Navigation
+
+<Steps>
+  <Step title="Browse Directories">
+    Click on any directory name to navigate into it. The path updates in the breadcrumb bar above.
+  </Step>
+  
+  <Step title="Navigate Up">
+    Click the **↑ Parent Directory** button or click a folder in the breadcrumb to jump up.
+  </Step>
+  
+  <Step title="Edit Files">
+    Click on a file name to open it in the Monaco code editor.
+  </Step>
+</Steps>
+
+### File Actions
+
+The toolbar provides quick actions:
+
+<CardGroup cols={2}>
+  <Card title="New File" icon="file-plus">
+    Create a new text file in the current directory. Opens a modal to enter the file name.
+  </Card>
+  
+  <Card title="New Folder" icon="folder-plus">
+    Create a new directory. Opens a modal to enter the folder name.
+  </Card>
+  
+  <Card title="Upload" icon="upload">
+    Upload files from your computer. Opens your system's file picker dialog.
+  </Card>
+  
+  <Card title="Pull File" icon="link">
+    Download a file from a remote URL directly to your server. Useful for downloading plugins, mods, or worlds.
+  </Card>
+</CardGroup>
+
+## File Operations
+
+### Creating Files and Folders
+
+<Tabs>
+  <Tab title="New File">
+    1. Click **New File** in the toolbar
+    2. Enter the file name (e.g., `config.yml`)
+    3. Click **Create File**
+    4. The file is created and opened in the editor
+    
+    API endpoint:
+    ```bash
+    POST /api/client/servers/{server}/files/write
+    ```
+  </Tab>
+  
+  <Tab title="New Folder">
+    1. Click **New Folder** in the toolbar
+    2. Enter the folder name (e.g., `plugins`)
+    3. Click **Create Folder**
+    4. The folder appears in the file list
+    
+    API endpoint:
+    ```bash
+    POST /api/client/servers/{server}/files/create-folder
+    ```
+  </Tab>
+</Tabs>
+
+### Uploading Files
+
+<Steps>
+  <Step title="Select Upload">
+    Click the **Upload** button in the toolbar to open your system's file picker.
+  </Step>
+  
+  <Step title="Choose Files">
+    Select one or more files to upload. Large files may take time depending on your connection.
+  </Step>
+  
+  <Step title="Upload Progress">
+    A blue progress indicator shows at the top of the screen during upload.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/files/upload
+```
+
+<Warning>
+  Upload size limits depend on your XyraPanel configuration. Very large files (>100 MB) should be uploaded via SFTP instead.
+</Warning>
+
+### Pull from URL
+
+Download files directly from remote URLs:
+
+<Steps>
+  <Step title="Click Pull File">
+    Open the **Pull File** modal from the toolbar.
+  </Step>
+  
+  <Step title="Enter URL">
+    Paste the direct download URL (e.g., `https://example.com/plugin.jar`).
+    
+    The file will be downloaded to your current directory.
+  </Step>
+  
+  <Step title="Wait for Download">
+    The server downloads the file in the background. A success notification appears when complete.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/files/pull
+```
+
+<Accordion title="Request Body Example">
+```json
+{
+  "url": "https://cdn.example.com/mod.jar"
+}
+```
+</Accordion>
+
+## Bulk Operations
+
+Select multiple files or folders to perform bulk actions:
+
+### Selection
+
+- Click the checkbox next to any file/folder to select it
+- Click the checkbox in the header to select all items
+- Selected items are highlighted
+
+### Bulk Actions Bar
+
+When items are selected, an actions bar appears:
+
+<CardGroup cols={2}>
+  <Card title="Copy" icon="copy">
+    Copy selected items to the same directory with `_copy` suffix.
+  </Card>
+  
+  <Card title="Move" icon="arrow-right">
+    Move selected items to a different directory. Opens a modal to specify destination.
+  </Card>
+  
+  <Card title="Archive" icon="file-zipper">
+    Compress selected files into a `.tar.gz` archive.
+  </Card>
+  
+  <Card title="Delete" icon="trash">
+    Delete all selected files and folders. Requires confirmation.
+  </Card>
+</CardGroup>
+
+### Copy Files
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/files/copy
+```
+
+<Accordion title="Request Body">
+```json
+{
+  "location": "/plugins/MyPlugin.jar"
+}
+```
+
+Creates `/plugins/MyPlugin_copy.jar`
+</Accordion>
+
+### Move Files
+
+1. Select files/folders
+2. Click **Move** in the bulk actions bar
+3. Enter the destination path (e.g., `/backups/`)
+4. Click **Move Items**
+
+API endpoint:
+```bash
+PUT /api/client/servers/{server}/files/rename
+```
+
+### Archive Files
+
+<Steps>
+  <Step title="Select Items">
+    Check the boxes for files/folders you want to compress.
+  </Step>
+  
+  <Step title="Click Archive">
+    The bulk actions bar shows **Archive** when eligible items are selected.
+  </Step>
+  
+  <Step title="Wait for Compression">
+    A `.tar.gz` archive is created in the current directory containing all selected items.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/files/compress
+```
+
+### Extract Archives
+
+To extract a compressed file:
+
+1. Select a `.tar.gz`, `.zip`, or similar archive
+2. Click **Unarchive** in the bulk actions bar
+3. Files are extracted to the current directory
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/files/decompress
+```
+
+## Monaco Code Editor
+
+Click on any text file to open it in the **Monaco editor** (the same editor that powers VS Code).
+
+### Editor Features
+
+<Accordion title="Syntax Highlighting">
+  Automatic language detection based on file extension:
+  - `.yml`, `.yaml` → YAML
+  - `.json` → JSON
+  - `.js` → JavaScript
+  - `.ts` → TypeScript
+  - `.conf`, `.properties`, `.ini` → INI/Config
+  - `.md` → Markdown
+  - `.log`, `.txt` → Plain text
+</Accordion>
+
+<Accordion title="IntelliSense">
+  - Auto-completion for JSON, JavaScript, TypeScript
+  - Bracket matching and auto-closing
+  - Real-time syntax validation
+</Accordion>
+
+<Accordion title="Keyboard Shortcuts">
+  - **Ctrl+S** (Cmd+S on Mac): Save file
+  - **Ctrl+F**: Find in file
+  - **Ctrl+H**: Find and replace
+  - **Ctrl+Z**: Undo
+  - **Ctrl+Shift+Z**: Redo
+</Accordion>
+
+### Editing Files
+
+<Steps>
+  <Step title="Click File">
+    Click on a file name in the file browser to open it.
+  </Step>
+  
+  <Step title="Make Changes">
+    Edit the file content in the Monaco editor. The editor shows your changes in real-time.
+  </Step>
+  
+  <Step title="Save Changes">
+    Click the **Save Changes** button or press Ctrl+S.
+    
+    The button is disabled until you make changes.
+  </Step>
+  
+  <Step title="Back to Files">
+    Click **← Back to Files** to return to the file browser.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/files/write
+```
+
+<Accordion title="Request Body Example">
+```json
+{
+  "file": "/server.properties",
+  "content": "max-players=20\ndifficulty=hard\n"
+}
+```
+</Accordion>
+
+### Reset Changes
+
+If you make changes you don't want to save:
+
+1. Click **Reset Changes**
+2. The file reverts to its saved state
+3. This discards all unsaved edits
+
+## Individual File Actions
+
+Right-click on any file or use the three-dot menu to access:
+
+<Tabs>
+  <Tab title="Rename">
+    Change the file or folder name:
+    1. Click **Rename**
+    2. Enter the new name
+    3. Click **Rename** to confirm
+    
+    API: `PUT /api/client/servers/{server}/files/rename`
+  </Tab>
+  
+  <Tab title="Download">
+    Download the file to your computer:
+    1. Click **Download**
+    2. Your browser downloads the file
+    
+    API: `GET /api/client/servers/{server}/files/download?file={path}`
+  </Tab>
+  
+  <Tab title="Permissions">
+    Change file permissions (chmod):
+    1. Click **Permissions**
+    2. Enter the octal mode (e.g., `755`, `644`)
+    3. Click **Update**
+    
+    API: `POST /api/client/servers/{server}/files/chmod`
+  </Tab>
+  
+  <Tab title="Delete">
+    Permanently delete the file or folder:
+    1. Click **Delete**
+    2. Confirm in the modal
+    3. The item is removed
+    
+    <Warning>Deletion is permanent and cannot be undone!</Warning>
+    
+    API: `POST /api/client/servers/{server}/files/delete`
+  </Tab>
+</Tabs>
+
+## File List API
+
+List files in a directory:
+
+```bash
+GET /api/client/servers/{server}/files/list?directory=/plugins
+```
+
+<Accordion title="Response Example">
+```json
+{
+  "data": {
+    "directory": "/plugins",
+    "entries": [
+      {
+        "name": "MyPlugin.jar",
+        "path": "/plugins/MyPlugin.jar",
+        "size": 1048576,
+        "mode": "0644",
+        "modeBits": 420,
+        "created": "2024-01-15T10:30:00Z",
+        "modified": "2024-01-15T14:22:00Z",
+        "isDirectory": false,
+        "isFile": true,
+        "isSymlink": false
+      },
+      {
+        "name": "PluginConfig",
+        "path": "/plugins/PluginConfig",
+        "size": 4096,
+        "mode": "0755",
+        "isDirectory": true,
+        "isFile": false
+      }
+    ]
+  }
+}
+```
+</Accordion>
+
+## Permissions
+
+File management requires specific permissions:
+
+- **Read files**: `server.files.read`
+- **Write/edit files**: `server.files.write`
+- **Delete files**: `server.files.delete`
+- **Download files**: `server.files.read`
+- **Upload files**: `server.files.write`
+
+Server owners and admins have all permissions by default.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Backup Before Editing" icon="shield">
+    Create a backup before modifying important config files. Use the copy function or the Backups tab.
+  </Card>
+  
+  <Card title="Test Changes" icon="flask">
+    After editing configs, restart your server to test changes work correctly.
+  </Card>
+  
+  <Card title="Use Proper Syntax" icon="code">
+    The Monaco editor validates syntax, but double-check YAML indentation and JSON structure.
+  </Card>
+  
+  <Card title="Organize Files" icon="folder-tree">
+    Keep files organized in folders. Use the archive feature to backup old configs.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="File won't save">
+    - Check you have `server.files.write` permission
+    - Ensure the server is not running out of disk space
+    - Verify the file is not locked by another process
+  </Accordion>
+  
+  <Accordion title="Upload fails">
+    - Check file size limits (may need SFTP for large files)
+    - Ensure you have `server.files.write` permission
+    - Verify you have enough disk space allocated
+  </Accordion>
+  
+  <Accordion title="Can't extract archive">
+    - Only `.tar.gz` and `.zip` files can be extracted
+    - The file must be a valid archive (not corrupted)
+    - Check you have enough disk space for the extracted files
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Schedules" icon="clock" href="/servers/schedules">
+    Automate file backups and cleanup tasks
+  </Card>
+  <Card title="Backups" icon="archive" href="/servers/backups">
+    Create full server backups including all files
+  </Card>
+</CardGroup>

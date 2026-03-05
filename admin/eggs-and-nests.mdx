@@ -1,0 +1,394 @@
+---
+title: 'Eggs and Nests'
+description: 'Configure game server types and installation scripts'
+icon: 'box'
+---
+
+## Overview
+
+**Nests** are categories of game server types (e.g., Minecraft, Source Engine, Voice Servers).  
+**Eggs** are specific server configurations within a nest (e.g., Minecraft Java, Minecraft Bedrock, Forge, Paper).
+
+Together, they define:
+- Docker images to use
+- Startup commands
+- Environment variables
+- Installation scripts
+- File configuration
+
+## Nests
+
+### What is a Nest?
+
+A nest groups related eggs together. For example:
+
+```
+Minecraft Nest
+├── Vanilla
+├── Paper
+├── Forge
+└── Bedrock
+
+Source Engine Nest
+├── Counter-Strike: GO
+├── Team Fortress 2
+└── Garry's Mod
+```
+
+### Creating a Nest
+
+<Steps>
+  <Step title="Navigate to nests">
+    Go to **Admin** > **Nests** in the panel.
+  </Step>
+
+  <Step title="Create nest">
+    Click **Create Nest** and provide:
+
+    **Name** (required)
+    - The nest category name
+    - Example: "Minecraft", "Source Engine", "Voice Servers"
+
+    **Description** (optional)
+    - Brief explanation of what servers this nest contains
+    - Example: "Minecraft Java and Bedrock servers"
+
+    **Author** (required)
+    - Your email or organization name
+    - Used for credits and egg attribution
+  </Step>
+
+  <Step title="Add eggs">
+    After creating the nest, add eggs to define specific server types.
+  </Step>
+</Steps>
+
+### Managing Nests
+
+**Viewing Eggs**
+Click on a nest name to see all eggs it contains. The badge shows the egg count:
+```
+Minecraft (4 eggs)
+```
+
+**Deleting Nests**
+
+<Warning>
+  You cannot delete a nest that contains eggs. Remove all eggs first.
+</Warning>
+
+## Eggs
+
+### What is an Egg?
+
+An egg is a complete server configuration that defines:
+
+1. **Docker Image**: Container image to run the server
+2. **Startup Command**: Command to start the server
+3. **Environment Variables**: Configurable settings
+4. **Install Script**: Script to install/update the server
+5. **Configuration Files**: Files to parse and modify
+
+### Creating an Egg
+
+<Steps>
+  <Step title="Navigate to a nest">
+    Go to **Admin** > **Nests** and click on a nest name.
+  </Step>
+
+  <Step title="Import or create egg">
+    You can either:
+
+    **Import from JSON**
+    - Click **Import Egg**
+    - Upload an egg JSON file
+    - The egg is created with all settings
+
+    **Create manually**
+    - Click **Create Egg**
+    - Fill in all configuration details
+  </Step>
+</Steps>
+
+### Egg Configuration
+
+#### Basic Settings
+
+```json
+{
+  "name": "Paper",
+  "description": "High-performance Minecraft server",
+  "dockerImage": "ghcr.io/pterodactyl/yolks:java_17",
+  "startup": "java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar {{SERVER_JARFILE}}"
+}
+```
+
+**Docker Image**
+- Specifies the container environment
+- Must be available in a Docker registry
+- Common registries: `ghcr.io`, `docker.io`
+
+**Startup Command**
+- Command to start the server process
+- Use `{{VARIABLE}}` for environment variables
+- Runs inside the container
+
+#### Environment Variables
+
+Variables allow server customization without editing the egg.
+
+<Steps>
+  <Step title="Add variable">
+    In the egg editor, scroll to **Environment Variables** and click **Add Variable**.
+  </Step>
+
+  <Step title="Configure variable">
+    **Name**: Display name (e.g., "Server JAR File")  
+    **Description**: Help text for users  
+    **Environment Variable**: Internal name (e.g., `SERVER_JARFILE`)  
+    **Default Value**: Initial value (e.g., `server.jar`)  
+    **Validation Rules**: Optional regex or rules (e.g., `required|string`)  
+
+    **User Viewable**: Users can see this variable  
+    **User Editable**: Users can change this variable  
+  </Step>
+
+  <Step title="Use in startup command">
+    Reference the variable in the startup command:
+    ```bash
+    java -jar {{SERVER_JARFILE}}
+    ```
+  </Step>
+</Steps>
+
+**Common Variables**:
+```bash
+SERVER_MEMORY    # Allocated RAM in MB
+SERVER_JARFILE   # Server executable filename
+SERVER_PORT      # Server listening port
+SERVER_VERSION   # Game/software version
+MAX_PLAYERS      # Maximum concurrent players
+```
+
+#### Install Script
+
+The install script runs when a server is created or reinstalled.
+
+```bash
+#!/bin/ash
+# Install script runs in Alpine Linux container
+
+cd /mnt/server
+
+# Download server files
+echo "Downloading Paper ${MINECRAFT_VERSION}..."
+curl -o server.jar https://api.papermc.io/v2/projects/paper/versions/${MINECRAFT_VERSION}/builds/latest/downloads/paper-${MINECRAFT_VERSION}.jar
+
+# Accept EULA
+echo "eula=true" > eula.txt
+
+echo "Installation complete!"
+```
+
+**Script Fields**:
+- **Container**: Docker image for installation (e.g., `ghcr.io/pterodactyl/installers:alpine`)
+- **Entrypoint**: Shell to use (e.g., `ash`, `bash`)
+- **Script**: Installation commands
+
+<Warning>
+  Install scripts run with limited privileges. They cannot use `sudo` or access the host system.
+</Warning>
+
+### Egg Variables Reference
+
+| Variable | Description | Example |
+|----------|-------------|----------|
+| `SERVER_MEMORY` | Allocated RAM (MB) | `2048` |
+| `SERVER_IP` | Server bind address | `0.0.0.0` |
+| `SERVER_PORT` | Server listening port | `25565` |
+| `STARTUP` | Parsed startup command | Auto-generated |
+| `P_SERVER_LOCATION` | Node location | `us-east` |
+| `P_SERVER_UUID` | Server UUID | Auto-generated |
+
+### Stop Command
+
+Defines how to gracefully stop the server:
+
+```bash
+# Minecraft
+stop
+
+# Source Engine
+quit
+
+# Send SIGTERM
+^C
+```
+
+If undefined, the container receives `SIGTERM`.
+
+## Exporting Eggs
+
+Share egg configurations with others:
+
+<Steps>
+  <Step title="Navigate to egg">
+    Go to **Admin** > **Nests** > **[Nest Name]** and click on an egg.
+  </Step>
+
+  <Step title="Export">
+    Click **Export Egg** to download a JSON file containing:
+    - All egg settings
+    - Environment variables
+    - Install script
+    - Docker configuration
+  </Step>
+
+  <Step title="Share or backup">
+    Use the exported file to:
+    - Backup egg configurations
+    - Share with other panel instances
+    - Version control egg changes
+  </Step>
+</Steps>
+
+## Importing Eggs
+
+Add pre-made eggs from the community:
+
+<Steps>
+  <Step title="Find egg JSON">
+    Download eggs from:
+    - [Pterodactyl Community Eggs](https://github.com/parkervcp/eggs)
+    - Other panel administrators
+    - Your backups
+  </Step>
+
+  <Step title="Import to nest">
+    1. Navigate to **Admin** > **Nests**
+    2. Click on the target nest
+    3. Click **Import Egg**
+    4. Upload the JSON file
+  </Step>
+
+  <Step title="Review and adjust">
+    After import:
+    - Review environment variables
+    - Test the install script
+    - Adjust Docker image if needed
+  </Step>
+</Steps>
+
+## Example: Minecraft Paper Egg
+
+```json
+{
+  "name": "Paper",
+  "description": "High-performance Minecraft server",
+  "author": "support@example.com",
+  "dockerImage": "ghcr.io/pterodactyl/yolks:java_17",
+  "startup": "java -Xms128M -Xmx{{SERVER_MEMORY}}M -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}",
+  "configStop": "stop",
+  "scriptContainer": "ghcr.io/pterodactyl/installers:alpine",
+  "scriptEntry": "ash",
+  "scriptInstall": "#!/bin/ash\ncd /mnt/server\n\nVERSION=\"1.20.4\"\nBUILD=\"latest\"\n\ncurl -o server.jar https://api.papermc.io/v2/projects/paper/versions/${VERSION}/builds/${BUILD}/downloads/paper-${VERSION}-${BUILD}.jar\n\necho \"eula=true\" > eula.txt",
+  "variables": [
+    {
+      "name": "Server JAR File",
+      "envVariable": "SERVER_JARFILE",
+      "defaultValue": "server.jar",
+      "userViewable": true,
+      "userEditable": false,
+      "rules": "required|string"
+    },
+    {
+      "name": "Minecraft Version",
+      "envVariable": "MINECRAFT_VERSION",
+      "defaultValue": "1.20.4",
+      "userViewable": true,
+      "userEditable": true,
+      "rules": "required|string"
+    }
+  ]
+}
+```
+
+## Best Practices
+
+### Organizing Nests
+
+✅ **Group by game/software**
+```
+Minecraft → Java, Bedrock, Modded variants
+Source Engine → CSGO, TF2, GMod
+Voice Servers → TeamSpeak, Mumble, Discord
+```
+
+❌ **Don't mix unrelated servers**
+```
+Game Servers → Minecraft, TeamSpeak, Database
+```
+
+### Variable Design
+
+✅ **User-friendly defaults**
+- Set sensible defaults
+- Make common settings editable
+- Hide advanced variables
+
+❌ **Over-exposure**
+- Don't make every variable user-editable
+- Hide internal variables
+- Limit dangerous settings
+
+### Install Scripts
+
+✅ **Robust scripts**
+- Check for errors
+- Validate downloads
+- Provide progress output
+
+```bash
+if ! curl -f -o server.jar $DOWNLOAD_URL; then
+  echo "Failed to download server!"
+  exit 1
+fi
+```
+
+❌ **Fragile scripts**
+```bash
+curl -o server.jar $URL  # No error checking
+```
+
+## Troubleshooting
+
+### Server won't start
+**Check**:
+- Docker image exists and is accessible
+- Startup command syntax is correct
+- Required variables are defined
+- Install script completed successfully
+
+### Install script fails
+**Common causes**:
+- Network connectivity issues
+- Invalid download URLs
+- Insufficient disk space
+- Missing dependencies in container
+
+### Variables not substituting
+**Ensure**:
+- Variable names match exactly (case-sensitive)
+- Variables are defined in the egg
+- Syntax is `{{VARIABLE}}` not `$VARIABLE`
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Nodes" icon="server" href="/admin/nodes">
+    Deploy eggs on Wings nodes
+  </Card>
+  <Card title="Server Management" icon="gamepad-2" href="/admin/servers">
+    Create servers using eggs
+  </Card>
+</CardGroup>

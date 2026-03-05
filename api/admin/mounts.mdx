@@ -1,0 +1,196 @@
+---
+title: 'Mounts'
+description: 'Manage filesystem mounts for servers'
+---
+
+## Overview
+
+Mounts allow you to share files or directories from the host system into server containers. They can be assigned to specific eggs, nodes, or individual servers.
+
+## Endpoints
+
+### List Mounts
+
+<CodeGroup>
+```bash GET /api/admin/mounts
+curl -X GET "https://panel.example.com/api/admin/mounts" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+```bash GET /api/admin/mounts?view=options
+curl -X GET "https://panel.example.com/api/admin/mounts?view=options" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+**Authentication**: Admin with `mounts:read` permission
+
+**Query Parameters**:
+- `view` (optional): Set to `options` for a simplified list of ID and name only
+
+**Response (default)**:
+```json
+{
+  "data": [
+    {
+      "id": "mount-uuid",
+      "uuid": "mount-uuid",
+      "name": "Shared Maps",
+      "description": "Shared world maps",
+      "source": "/mnt/maps",
+      "target": "/home/container/maps",
+      "readOnly": true,
+      "userMountable": false,
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z",
+      "eggCount": 3,
+      "nodeCount": 5,
+      "serverCount": 12
+    }
+  ]
+}
+```
+
+**Response (view=options)**:
+```json
+{
+  "data": [
+    {
+      "id": "mount-uuid",
+      "name": "Shared Maps"
+    }
+  ]
+}
+```
+
+### Create Mount
+
+<CodeGroup>
+```bash POST /api/admin/mounts
+curl -X POST "https://panel.example.com/api/admin/mounts" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shared Plugins",
+    "description": "Shared plugin directory",
+    "source": "/mnt/plugins",
+    "target": "/home/container/plugins",
+    "readOnly": true,
+    "userMountable": false,
+    "nodeIds": ["node-uuid-1", "node-uuid-2"],
+    "eggIds": ["egg-uuid-1"]
+  }'
+```
+</CodeGroup>
+
+**Request Body**:
+- `name` (required): Mount name (1-255 characters, trimmed)
+- `description` (optional): Description (max 500 characters, trimmed)
+- `source` (required): Host path (trimmed, minimum 1 character)
+- `target` (required): Container path (trimmed, minimum 1 character)
+- `readOnly` (optional): Whether mount is read-only (default: false)
+- `userMountable` (optional): Whether users can mount this (default: false)
+- `nodeIds` (optional): Array of node UUIDs to assign mount to
+- `eggIds` (optional): Array of egg UUIDs to assign mount to
+
+### Update Mount
+
+<CodeGroup>
+```bash PATCH /api/admin/mounts/:id
+curl -X PATCH "https://panel.example.com/api/admin/mounts/mount-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "readOnly": false,
+    "userMountable": true
+  }'
+```
+</CodeGroup>
+
+**Request Body**: Same as create, but all fields are optional
+
+### Delete Mount
+
+<CodeGroup>
+```bash DELETE /api/admin/mounts/:id
+curl -X DELETE "https://panel.example.com/api/admin/mounts/mount-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Mount Object
+
+<ResponseField name="id" type="string">
+  Mount UUID
+</ResponseField>
+
+<ResponseField name="uuid" type="string">
+  Mount UUID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Mount name
+</ResponseField>
+
+<ResponseField name="description" type="string" nullable>
+  Mount description
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  Path on the host system
+</ResponseField>
+
+<ResponseField name="target" type="string">
+  Path inside the container
+</ResponseField>
+
+<ResponseField name="readOnly" type="boolean">
+  Whether the mount is read-only
+</ResponseField>
+
+<ResponseField name="userMountable" type="boolean">
+  Whether users can mount this themselves
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="eggCount" type="integer">
+  Number of eggs using this mount (list endpoint only)
+</ResponseField>
+
+<ResponseField name="nodeCount" type="integer">
+  Number of nodes with this mount (list endpoint only)
+</ResponseField>
+
+<ResponseField name="serverCount" type="integer">
+  Number of servers using this mount (list endpoint only)
+</ResponseField>
+
+## Mount Assignment
+
+Mounts can be assigned to:
+- **Eggs**: Mount automatically applies to all servers using that egg
+- **Nodes**: Mount is only available on specific nodes
+- **Servers**: Mount can be individually assigned to servers
+
+## Security Considerations
+
+- Use `readOnly: true` when servers should not modify shared data
+- Carefully control `userMountable` to prevent security issues
+- Ensure source paths exist on all assigned nodes
+- Be cautious with sensitive directories (e.g., `/etc`, system paths)
+
+## Notes
+
+- Mounts are ordered alphabetically by name
+- Counts are computed via SQL joins in the list endpoint
+- Use `view=options` for dropdown/select inputs
+- Audit logs track all mount operations

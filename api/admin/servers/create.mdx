@@ -1,0 +1,184 @@
+---
+title: 'Create Server'
+api: 'POST /api/admin/servers'
+description: 'Create a new server and provision it on Wings'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `servers:write` permission.
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  Server name (1-255 characters)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Server description
+</ParamField>
+
+<ParamField body="ownerId" type="string" required>
+  UUID of the server owner
+</ParamField>
+
+<ParamField body="eggId" type="string" required>
+  UUID of the egg to use
+</ParamField>
+
+<ParamField body="nestId" type="string">
+  UUID of the nest (optional)
+</ParamField>
+
+<ParamField body="nodeId" type="string" required>
+  ID of the node to deploy on
+</ParamField>
+
+<ParamField body="allocationId" type="string" required>
+  UUID of the primary allocation
+</ParamField>
+
+<ParamField body="memory" type="integer" required>
+  Memory limit in MB (must be positive)
+</ParamField>
+
+<ParamField body="swap" type="integer" default="0">
+  Swap space in MB (minimum: 0)
+</ParamField>
+
+<ParamField body="disk" type="integer" required>
+  Disk space in MB (must be positive)
+</ParamField>
+
+<ParamField body="io" type="integer" default="500">
+  Block I/O weight (10-1000)
+</ParamField>
+
+<ParamField body="cpu" type="integer" default="0">
+  CPU limit percentage (0 = unlimited)
+</ParamField>
+
+<ParamField body="threads" type="string">
+  CPU thread pinning (e.g., "0-3,8")
+</ParamField>
+
+<ParamField body="databases" type="integer" default="0">
+  Database limit (0 = unlimited)
+</ParamField>
+
+<ParamField body="allocations" type="integer" default="0">
+  Additional allocation limit
+</ParamField>
+
+<ParamField body="backups" type="integer" default="0">
+  Backup limit
+</ParamField>
+
+<ParamField body="startup" type="string">
+  Custom startup command
+</ParamField>
+
+<ParamField body="environment" type="object">
+  Environment variables as key-value pairs
+</ParamField>
+
+<ParamField body="dockerImage" type="string">
+  Custom Docker image
+</ParamField>
+
+<ParamField body="skipScripts" type="boolean" default="false">
+  Skip installation scripts
+</ParamField>
+
+<ParamField body="startOnCompletion" type="boolean" default="true">
+  Start server after installation
+</ParamField>
+
+<ParamField body="oomDisabled" type="boolean">
+  Disable OOM killer
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Created server information
+  
+  <Expandable title="Server Object">
+    <ResponseField name="id" type="string">
+      Server UUID
+    </ResponseField>
+    
+    <ResponseField name="uuid" type="string">
+      Server UUID
+    </ResponseField>
+    
+    <ResponseField name="identifier" type="string">
+      Short server identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Server name
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Server status (will be "installing")
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://panel.example.com/api/admin/servers" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "name": "My Game Server",
+    "description": "Production Minecraft server",
+    "ownerId": "user-uuid",
+    "eggId": "egg-uuid",
+    "nodeId": "node-id",
+    "allocationId": "allocation-uuid",
+    "memory": 2048,
+    "swap": 0,
+    "disk": 10240,
+    "io": 500,
+    "cpu": 100,
+    "databases": 1,
+    "allocations": 0,
+    "backups": 3,
+    "environment": {
+      "MINECRAFT_VERSION": "1.20.1",
+      "SERVER_JARFILE": "server.jar"
+    },
+    "startOnCompletion": true
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "identifier": "a1b2c3d4",
+    "name": "My Game Server",
+    "status": "installing",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+</ResponseExample>
+
+## Notes
+
+- The server will be provisioned asynchronously on Wings
+- The response is returned immediately with status "installing"
+- If provisioning fails, the server status will be updated to "install_failed"
+- A creation email will be sent to the owner if email is configured
+- The allocation must be available and belong to the specified node

@@ -1,0 +1,109 @@
+---
+title: 'Create User'
+api: 'POST /api/admin/users'
+description: 'Create a new user account'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `users:write` permission.
+
+## Request Body
+
+<ParamField body="username" type="string" required>
+  Username (minimum 1 character, trimmed)
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Valid email address (trimmed)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password (minimum 8 characters)
+</ParamField>
+
+<ParamField body="language" type="string">
+  Language code (defaults to `DEFAULT_LANGUAGE` env var or "en")
+</ParamField>
+
+<ParamField body="role" type="string" default="user">
+  User role: `user` or `admin`
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Created user information
+  
+  <Expandable title="User Object">
+    <ResponseField name="id" type="string">
+      User UUID
+    </ResponseField>
+    
+    <ResponseField name="username" type="string">
+      Username
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Email address
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://panel.example.com/api/admin/users" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "username": "john.doe",
+    "email": "john.doe@example.com",
+    "password": "SecurePassword123!",
+    "language": "en",
+    "role": "user"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "username": "john.doe",
+    "email": "john.doe@example.com",
+    "role": "user",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+</ResponseExample>
+
+## Process
+
+1. Email uniqueness is verified
+2. Password is hashed using bcrypt (cost: 12)
+3. User account is created with email automatically verified
+4. Credential account is linked for authentication
+5. Welcome email is sent to the user (if email is configured)
+
+## Error Responses
+
+- **409 Conflict**: A user with this email already exists
+- **400 Bad Request**: Validation failed (invalid email, short password, etc.)
+
+## Notes
+
+- Email is automatically marked as verified
+- If `role` is "admin", `rootAdmin` is set to true
+- Password must meet minimum 8 character requirement
+- Creation email may fail silently if email service is not configured

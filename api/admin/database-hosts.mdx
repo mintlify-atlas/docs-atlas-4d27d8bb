@@ -1,0 +1,170 @@
+---
+title: 'Database Hosts'
+description: 'Manage MySQL/MariaDB database hosts'
+---
+
+## Overview
+
+Database hosts are MySQL/MariaDB servers that can create databases for game servers. Each host can have a maximum database limit and be assigned to specific nodes.
+
+## Endpoints
+
+### List Database Hosts
+
+<CodeGroup>
+```bash GET /api/admin/database-hosts
+curl -X GET "https://panel.example.com/api/admin/database-hosts" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+**Authentication**: Admin with `database_hosts:read` permission
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "id": "host-uuid",
+      "name": "MySQL Server 1",
+      "hostname": "mysql.example.com",
+      "port": 3306,
+      "username": "pterodactyl",
+      "maxDatabases": 100,
+      "databaseCount": 42
+    }
+  ]
+}
+```
+
+### Create Database Host
+
+<CodeGroup>
+```bash POST /api/admin/database-hosts
+curl -X POST "https://panel.example.com/api/admin/database-hosts" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "MySQL Server 2",
+    "hostname": "mysql2.example.com",
+    "port": 3306,
+    "username": "pterodactyl",
+    "password": "secure_password",
+    "database": "panel",
+    "nodeId": "node-uuid",
+    "maxDatabases": 200
+  }'
+```
+</CodeGroup>
+
+**Request Body**:
+- `name` (required): Display name (1-255 characters, trimmed)
+- `hostname` (required): MySQL hostname or IP (1-255 characters, trimmed)
+- `port` (optional): MySQL port (1-65535, default: 3306)
+- `username` (required): MySQL username (1-255 characters, trimmed)
+- `password` (required): MySQL password (minimum 1 character)
+- `database` (optional): Database name to use for the panel (1-255 characters, trimmed)
+- `nodeId` (optional): Assign to specific node (UUID, trimmed)
+- `maxDatabases` (optional): Maximum databases allowed (minimum: 0, null = unlimited)
+
+### Update Database Host
+
+<CodeGroup>
+```bash PATCH /api/admin/database-hosts/:id
+curl -X PATCH "https://panel.example.com/api/admin/database-hosts/host-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "maxDatabases": 250
+  }'
+```
+</CodeGroup>
+
+**Request Body**: Same as create, but all fields are optional
+
+### Delete Database Host
+
+<CodeGroup>
+```bash DELETE /api/admin/database-hosts/:id
+curl -X DELETE "https://panel.example.com/api/admin/database-hosts/host-uuid" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+**Restrictions**: Cannot delete a host that has databases created on it
+
+### Test Database Connection
+
+<CodeGroup>
+```bash POST /api/admin/database-hosts/:id/test
+curl -X POST "https://panel.example.com/api/admin/database-hosts/host-uuid/test" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+</CodeGroup>
+
+Tests the connection to the database host to verify credentials and connectivity.
+
+**Response**:
+```json
+{
+  "data": {
+    "success": true,
+    "message": "Connection successful"
+  }
+}
+```
+
+## Database Host Object
+
+<ResponseField name="id" type="string">
+  Database host UUID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Display name for the database host
+</ResponseField>
+
+<ResponseField name="hostname" type="string">
+  MySQL server hostname or IP address
+</ResponseField>
+
+<ResponseField name="port" type="integer">
+  MySQL server port
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  MySQL username
+</ResponseField>
+
+<ResponseField name="maxDatabases" type="integer" nullable>
+  Maximum databases allowed (null = unlimited)
+</ResponseField>
+
+<ResponseField name="databaseCount" type="integer">
+  Current number of databases on this host
+</ResponseField>
+
+## Notes
+
+- Database hosts are ordered alphabetically by name
+- The `databaseCount` is computed via SQL join
+- Password is never returned in API responses
+- Use the test endpoint to verify connection before creating servers
+- The database host user needs privileges to create databases and users
+
+## Required MySQL Privileges
+
+The database host user needs the following privileges:
+```sql
+GRANT CREATE, DROP, ALTER, INDEX, REFERENCES ON *.* TO 'pterodactyl'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE USER ON *.* TO 'pterodactyl'@'%';
+```
+
+## Security Considerations
+
+- Use strong passwords for database host accounts
+- Limit access by IP when possible
+- Consider using separate database hosts per node or region
+- Monitor `databaseCount` against `maxDatabases` limits

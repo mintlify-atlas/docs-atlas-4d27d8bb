@@ -1,0 +1,496 @@
+---
+title: Configuration
+description: Configure XyraPanel using environment variables in the .env file
+---
+
+XyraPanel is configured entirely through environment variables stored in the `.env` file. This guide explains all available configuration options.
+
+## Environment File Location
+
+<CodeGroup>
+```bash One-Line Installer
+/opt/xyrapanel/.env
+```
+
+```bash Docker
+./xyrapanel/.env
+```
+
+```bash Manual Installation
+/opt/xyrapanel/.env
+```
+</CodeGroup>
+
+## Essential Configuration
+
+These variables **must** be configured before running XyraPanel.
+
+### Application Settings
+
+```bash .env
+APP_NAME="XyraPanel"
+NODE_ENV="production"
+DEBUG=false
+```
+
+<ParamField path="APP_NAME" type="string" default="XyraPanel">
+  The display name of your panel. Shown in the UI and emails.
+</ParamField>
+
+<ParamField path="NODE_ENV" type="string" default="production">
+  Environment mode. Use `production` for live deployments, `development` for local testing.
+</ParamField>
+
+<ParamField path="DEBUG" type="boolean" default="false">
+  Enable debug logging. Only use in development.
+</ParamField>
+
+### Application URLs
+
+```bash .env
+BETTER_AUTH_URL=https://panel.example.com
+BETTER_AUTH_TRUSTED_ORIGINS=https://panel.example.com
+NUXT_PUBLIC_APP_URL=https://panel.example.com
+PANEL_PUBLIC_URL="https://panel.example.com"
+PANEL_INTERNAL_URL="http://127.0.0.1:3000"
+PORT="3000"
+```
+
+<ParamField path="BETTER_AUTH_URL" type="string" required>
+  Public URL where your panel is accessible. Must include protocol (`https://`).
+</ParamField>
+
+<ParamField path="BETTER_AUTH_TRUSTED_ORIGINS" type="string" required>
+  Comma-separated list of trusted origins for authentication. Typically matches `BETTER_AUTH_URL`.
+</ParamField>
+
+<ParamField path="NUXT_PUBLIC_APP_URL" type="string" required>
+  Public-facing application URL. Used for client-side routing.
+</ParamField>
+
+<ParamField path="PANEL_PUBLIC_URL" type="string" required>
+  External URL used in emails and API responses.
+</ParamField>
+
+<ParamField path="PANEL_INTERNAL_URL" type="string" default="http://127.0.0.1:3000">
+  Internal URL for server-to-server communication.
+</ParamField>
+
+<ParamField path="PORT" type="number" default="3000">
+  Port the application listens on. Nginx proxies to this port.
+</ParamField>
+
+### Authentication Secrets
+
+<Warning>
+  **Security Critical:** Generate strong, unique secrets for production. Never share these values.
+</Warning>
+
+```bash .env
+# Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=<your-generated-secret>
+SEED_SECRET=<your-generated-secret>
+```
+
+<ParamField path="BETTER_AUTH_SECRET" type="string" required>
+  Secret key for authentication token signing. Generate with `openssl rand -base64 32`.
+  
+  <Warning>Changing this will invalidate all existing sessions.</Warning>
+</ParamField>
+
+<ParamField path="SEED_SECRET" type="string" required>
+  Secret used to protect the admin seed endpoint. Required for creating the initial admin account.
+</ParamField>
+
+### Admin Account Seeding
+
+```bash .env
+SEED_ADMIN_EMAIL="admin@example.com"
+SEED_ADMIN_PASSWORD="changeme"
+SEED_ADMIN_USERNAME="admin"
+SEED_ADMIN_NAME="Admin"
+```
+
+<ParamField path="SEED_ADMIN_EMAIL" type="string" required>
+  Email address for the initial admin account.
+</ParamField>
+
+<ParamField path="SEED_ADMIN_PASSWORD" type="string" required>
+  Password for the initial admin account. **Change this immediately after first login.**
+</ParamField>
+
+<ParamField path="SEED_ADMIN_USERNAME" type="string" required>
+  Username for the admin account.
+</ParamField>
+
+<ParamField path="SEED_ADMIN_NAME" type="string" required>
+  Display name for the admin user.
+</ParamField>
+
+### Database Configuration
+
+```bash .env
+# PostgreSQL connection string
+DATABASE_URL="postgresql://xyra:changeme@postgres:5432/xyrapanel"
+
+# Docker only: these configure the postgres container
+DB_USER="xyra"
+DB_PASSWORD="changeme"
+DB_NAME="xyrapanel"
+```
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string. Format:
+  ```
+  postgresql://[user]:[password]@[host]:[port]/[database]
+  ```
+  
+  **Examples:**
+  - Docker: `postgresql://xyra:changeme@postgres:5432/xyrapanel`
+  - Manual: `postgresql://xyra:changeme@127.0.0.1:5432/xyrapanel`
+</ParamField>
+
+<ParamField path="DB_USER" type="string" default="xyra">
+  Database username. Docker only - must match credentials in `DATABASE_URL`.
+</ParamField>
+
+<ParamField path="DB_PASSWORD" type="string" required>
+  Database password. Docker only - must match credentials in `DATABASE_URL`.
+</ParamField>
+
+<ParamField path="DB_NAME" type="string" default="xyrapanel">
+  Database name. Docker only - must match database in `DATABASE_URL`.
+</ParamField>
+
+### Redis Configuration
+
+```bash .env
+REDIS_HOST="redis"
+REDIS_PORT="6379"
+# REDIS_USERNAME=""  # Optional
+# REDIS_PASSWORD=""  # Optional
+# REDIS_TLS="false"  # Optional
+```
+
+<ParamField path="REDIS_HOST" type="string" required>
+  Redis server hostname.
+  - Docker: `redis`
+  - Manual: `127.0.0.1` or `localhost`
+</ParamField>
+
+<ParamField path="REDIS_PORT" type="number" default="6379">
+  Redis server port.
+</ParamField>
+
+<ParamField path="REDIS_USERNAME" type="string">
+  Redis username (ACL). Leave empty if not using authentication.
+</ParamField>
+
+<ParamField path="REDIS_PASSWORD" type="string">
+  Redis password. Leave empty if not using authentication.
+</ParamField>
+
+<ParamField path="REDIS_TLS" type="boolean" default="false">
+  Enable TLS for Redis connection. Set to `true` for managed Redis services.
+</ParamField>
+
+## Advanced Configuration
+
+### Nuxt/Nitro Redis Storage
+
+Internal caching configuration. Must match your Redis settings.
+
+```bash .env
+NITRO_STORAGE_CACHE_DRIVER="redis"
+NITRO_STORAGE_CACHE_HOST="redis"
+NITRO_STORAGE_CACHE_PORT="6379"
+NUXT_REDIS_HOST="redis"
+NUXT_REDIS_PORT="6379"
+```
+
+### Security Settings
+
+```bash .env
+NUXT_SECURITY_CORS_ORIGIN="https://panel.example.com"
+NUXT_SECURITY_CONNECT_SRC="https://panel.example.com"
+NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+NUXT_SECURITY_RATE_LIMIT_TOKENS="150"
+NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="300000"
+NUXT_SECURITY_CSP_REPORT_ONLY="false"
+NUXT_SECURITY_CSP_REPORT_URI=""
+```
+
+<ParamField path="NUXT_SECURITY_CORS_ORIGIN" type="string" required>
+  Allowed CORS origin. Should match your panel URL.
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_RATE_LIMIT_DRIVER" type="string" default="redis">
+  Rate limiting storage driver. Use `redis` in production, `lruCache` for development.
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_RATE_LIMIT_TOKENS" type="number" default="150">
+  Number of requests allowed per interval.
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS" type="number" default="300000">
+  Rate limit interval in milliseconds (default: 5 minutes).
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_CSP_REPORT_ONLY" type="boolean" default="false">
+  Content Security Policy mode.
+  - `true`: Report violations without blocking (testing)
+  - `false`: Enforce CSP and block violations (production)
+</ParamField>
+
+### HTTP Cache Settings
+
+```bash .env
+NUXT_HTTP_CACHE_ENABLED="true"
+NUXT_HTTP_CACHE_DEFAULT_MAX_AGE="5"
+NUXT_HTTP_CACHE_DEFAULT_SWR="15"
+NUXT_HTTP_CACHE_DASHBOARD_MAX_AGE="10"
+NUXT_HTTP_CACHE_DASHBOARD_SWR="30"
+```
+
+<ParamField path="NUXT_HTTP_CACHE_ENABLED" type="boolean" default="true">
+  Enable HTTP response caching for improved performance.
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_DEFAULT_MAX_AGE" type="number" default="5">
+  Default cache max-age in seconds.
+</ParamField>
+
+<ParamField path="NUXT_HTTP_CACHE_DEFAULT_SWR" type="number" default="15">
+  Stale-while-revalidate duration in seconds.
+</ParamField>
+
+### Captcha Configuration
+
+XyraPanel supports Cloudflare Turnstile, Google reCAPTCHA v3, and hCaptcha.
+
+<Tabs>
+  <Tab title="Cloudflare Turnstile">
+    ```bash .env
+    CAPTCHA_PROVIDER="turnstile"
+    NUXT_TURNSTILE_SECRET_KEY="your-secret-key"
+    NUXT_PUBLIC_TURNSTILE_SITE_KEY="your-site-key"
+    ```
+
+    Get your keys at: [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile)
+
+    <Note>
+      Test mode key: `1x00000000000000000000AA` (allows testing without validation)
+    </Note>
+  </Tab>
+
+  <Tab title="Google reCAPTCHA v3">
+    ```bash .env
+    CAPTCHA_PROVIDER="recaptcha"
+    NUXT_RECAPTCHA_SECRET_KEY="your-secret-key"
+    NUXT_RECAPTCHA_MIN_SCORE="0.5"
+    ```
+
+    Get your keys at: [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin)
+  </Tab>
+
+  <Tab title="hCaptcha">
+    ```bash .env
+    CAPTCHA_PROVIDER="hcaptcha"
+    NUXT_HCAPTCHA_SECRET_KEY="your-secret-key"
+    NUXT_HCAPTCHA_SITE_KEY="your-site-key"
+    ```
+
+    Get your keys at: [hCaptcha Dashboard](https://dashboard.hcaptcha.com/)
+  </Tab>
+</Tabs>
+
+### Request Limits
+
+```bash .env
+NUXT_MAX_REQUEST_SIZE_MB="10"
+NUXT_MAX_UPLOAD_SIZE_MB="20"
+```
+
+<ParamField path="NUXT_MAX_REQUEST_SIZE_MB" type="number" default="10">
+  Maximum request body size in megabytes.
+</ParamField>
+
+<ParamField path="NUXT_MAX_UPLOAD_SIZE_MB" type="number" default="20">
+  Maximum file upload size in megabytes.
+</ParamField>
+
+### PM2 Configuration
+
+```bash .env
+# INSTANCES=1  # Uncomment to force single instance
+# MAX_MEMORY_RESTART="1G"  # Restart if memory exceeds limit
+```
+
+<ParamField path="INSTANCES" type="number" default="max">
+  Number of PM2 instances to run.
+  - `max`: Use all CPU cores (default)
+  - `1`: Single instance (recommended for servers with less than 2GB RAM)
+  - `<number>`: Specific number of instances
+</ParamField>
+
+<ParamField path="MAX_MEMORY_RESTART" type="string" default="1G">
+  Restart instance if memory usage exceeds this limit. Format: `<number>G` or `<number>M`.
+</ParamField>
+
+## Configuration Examples
+
+### Development Setup
+
+```bash .env
+APP_NAME="XyraPanel Dev"
+NODE_ENV="development"
+DEBUG=true
+
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000
+NUXT_PUBLIC_APP_URL=http://localhost:3000
+PANEL_PUBLIC_URL="http://localhost:3000"
+PANEL_INTERNAL_URL="http://127.0.0.1:3000"
+PORT="3000"
+
+BETTER_AUTH_SECRET=<generated-secret>
+SEED_SECRET=<generated-secret>
+
+SEED_ADMIN_EMAIL="dev@localhost"
+SEED_ADMIN_PASSWORD="admin"
+SEED_ADMIN_USERNAME="admin"
+SEED_ADMIN_NAME="Dev Admin"
+
+DATABASE_URL="postgresql://xyra:changeme@localhost:5432/xyrapanel"
+
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+
+NUXT_SECURITY_RATE_LIMIT_DRIVER="lruCache"
+CAPTCHA_PROVIDER="turnstile"
+NUXT_PUBLIC_TURNSTILE_SITE_KEY="1x00000000000000000000AA"
+```
+
+### Production Setup
+
+```bash .env
+APP_NAME="XyraPanel"
+NODE_ENV="production"
+DEBUG=false
+
+BETTER_AUTH_URL=https://panel.yourdomain.com
+BETTER_AUTH_TRUSTED_ORIGINS=https://panel.yourdomain.com
+NUXT_PUBLIC_APP_URL=https://panel.yourdomain.com
+PANEL_PUBLIC_URL="https://panel.yourdomain.com"
+PANEL_INTERNAL_URL="http://127.0.0.1:3000"
+PORT="3000"
+
+BETTER_AUTH_SECRET=<strong-generated-secret>
+SEED_SECRET=<strong-generated-secret>
+
+SEED_ADMIN_EMAIL="admin@yourdomain.com"
+SEED_ADMIN_PASSWORD="<strong-password>"
+SEED_ADMIN_USERNAME="admin"
+SEED_ADMIN_NAME="Administrator"
+
+DATABASE_URL="postgresql://xyrapanel:<secure-password>@127.0.0.1:5432/xyrapanel"
+
+REDIS_HOST="127.0.0.1"
+REDIS_PORT="6379"
+REDIS_PASSWORD="<redis-password>"
+
+NUXT_SECURITY_CORS_ORIGIN="https://panel.yourdomain.com"
+NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+NUXT_SECURITY_RATE_LIMIT_TOKENS="1000"
+NUXT_SECURITY_CSP_REPORT_ONLY="false"
+
+CAPTCHA_PROVIDER="turnstile"
+NUXT_TURNSTILE_SECRET_KEY="<your-turnstile-secret>"
+NUXT_PUBLIC_TURNSTILE_SITE_KEY="<your-turnstile-site-key>"
+
+INSTANCES=2
+MAX_MEMORY_RESTART="1G"
+```
+
+## Applying Configuration Changes
+
+After modifying `.env`, restart the panel:
+
+<CodeGroup>
+```bash One-Line Installer / Manual
+pm2 restart xyrapanel
+```
+
+```bash Docker
+docker compose restart app
+```
+</CodeGroup>
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Generate Strong Secrets">
+    Always generate cryptographically secure secrets:
+
+    ```bash
+    # Generate BETTER_AUTH_SECRET
+    openssl rand -base64 32
+
+    # Generate SEED_SECRET
+    openssl rand -base64 32
+
+    # Generate database password
+    openssl rand -hex 16
+    ```
+  </Accordion>
+
+  <Accordion title="Protect Your .env File">
+    Ensure proper file permissions:
+
+    ```bash
+    chmod 600 /opt/xyrapanel/.env
+    chown xyrapanel:xyrapanel /opt/xyrapanel/.env
+    ```
+
+    <Warning>
+      Never commit `.env` to version control. Add it to `.gitignore`.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Use HTTPS in Production">
+    Always use `https://` URLs for production deployments:
+    - `BETTER_AUTH_URL`
+    - `NUXT_PUBLIC_APP_URL`
+    - `PANEL_PUBLIC_URL`
+
+    Use Let's Encrypt for free SSL certificates.
+  </Accordion>
+
+  <Accordion title="Enable Rate Limiting">
+    Use Redis-based rate limiting in production:
+
+    ```bash
+    NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+    NUXT_SECURITY_RATE_LIMIT_TOKENS="1000"
+    ```
+  </Accordion>
+
+  <Accordion title="Rotate Secrets Regularly">
+    Implement a secret rotation policy:
+    1. Generate new `BETTER_AUTH_SECRET`
+    2. Update `.env`
+    3. Restart the panel
+    4. All users will need to re-authenticate
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="First Server" icon="server" href="/getting-started/first-server">
+    Create your first game server
+  </Card>
+  <Card title="Wings Setup" icon="feather" href="/wings/installation">
+    Install and configure Wings daemon
+  </Card>
+</CardGroup>

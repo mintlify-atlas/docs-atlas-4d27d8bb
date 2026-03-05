@@ -1,0 +1,457 @@
+---
+title: Backups
+description: Create, manage, and restore server backups to protect your data
+icon: 'archive'
+---
+
+## Overview
+
+XyraPanel's backup system allows you to create snapshots of your server's files and restore them when needed. Backups protect against data loss, failed updates, and player mistakes.
+
+## Accessing Backups
+
+Navigate to your server's backup management:
+
+```
+/server/{server-identifier}/backups
+```
+
+The backups page displays all available backups with their size, creation date, and status.
+
+## Creating Backups
+
+Create a backup manually at any time:
+
+<Steps>
+  <Step title="Click Create Backup">
+    Click the **Create Backup** button in the top-right corner.
+  </Step>
+  
+  <Step title="Backup Starts">
+    The backup process begins immediately. Your server remains online during backup creation.
+  </Step>
+  
+  <Step title="Wait for Completion">
+    Backup creation time depends on your server size. Small servers (< 1 GB) complete in seconds, larger servers may take minutes.
+    
+    A progress indicator shows the backup is in progress.
+  </Step>
+  
+  <Step title="Backup Ready">
+    When complete, the backup appears in your backup list with a **Completed** status.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/backups
+```
+
+<Accordion title="Request Body Example">
+```json
+{
+  "name": "Pre-update backup",
+  "locked": false
+}
+```
+
+The `name` parameter is optional. If not provided, backups are named with timestamps.
+</Accordion>
+
+<Note>
+  Your server's backup limit is set by an administrator. If you reach your limit, delete old backups or ask an admin to increase your limit.
+</Note>
+
+## Backup List
+
+The backup table displays:
+
+<Tabs>
+  <Tab title="Backup Info">
+    - **Name**: Backup name or auto-generated timestamp
+    - **UUID**: Unique identifier for the backup
+    - **Lock Status**: Whether the backup is locked (protected from deletion)
+  </Tab>
+  
+  <Tab title="Details">
+    - **Size**: Backup file size (compressed)
+    - **Created**: When the backup was created
+    - **Storage**: Where the backup is stored (Wings or S3)
+  </Tab>
+  
+  <Tab title="Status">
+    - **Completed** (Green): Backup successful and ready
+    - **In Progress** (Yellow): Backup is being created
+    - **Failed** (Red): Backup creation failed
+  </Tab>
+</Tabs>
+
+## Backup Actions
+
+Each backup has several available actions:
+
+### Download Backup
+
+Download a backup to your local computer:
+
+<Steps>
+  <Step title="Click Download">
+    Click the **Download** button next to a completed backup.
+  </Step>
+  
+  <Step title="Download Starts">
+    Your browser begins downloading the backup archive (`.tar.gz` file).
+  </Step>
+  
+  <Step title="Save Locally">
+    Save the backup file to your computer for safekeeping or manual restoration.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+GET /api/client/servers/{server}/backups/{backup}/download
+```
+
+Returns a pre-signed URL to download the backup directly from storage.
+
+<Warning>
+  Download links expire after a short time (typically 5-10 minutes) for security. Start downloading immediately.
+</Warning>
+
+### Restore Backup
+
+Restore your server to a previous backup:
+
+<Warning>
+  **Destructive Operation**
+  
+  Restoring a backup **replaces all current server files** with the backup contents. Current files will be permanently lost unless you create a backup first.
+</Warning>
+
+<Steps>
+  <Step title="Click Restore">
+    Click the **Restore** button on the backup you want to restore.
+  </Step>
+  
+  <Step title="Confirm Restoration">
+    A warning modal explains that current files will be replaced. Click **Restore** to confirm.
+  </Step>
+  
+  <Step title="Server Stops">
+    Your server is automatically stopped to prevent data corruption during restoration.
+  </Step>
+  
+  <Step title="Files Restored">
+    The backup is extracted and all files are restored. This may take several minutes for large backups.
+  </Step>
+  
+  <Step title="Server Ready">
+    Once complete, start your server manually. Check the console for any errors.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/backups/{backup}/restore
+```
+
+<Info>
+  Your server will show a **Restoring Backup** status during the restoration process. Power controls are disabled during this time.
+</Info>
+
+### Lock/Unlock Backup
+
+Locked backups cannot be deleted, protecting important backups:
+
+<Tabs>
+  <Tab title="Lock Backup">
+    Protect a backup from accidental deletion:
+    
+    1. Click the **Lock** button
+    2. The backup is marked with a lock icon
+    3. Delete button becomes disabled
+    
+    Use this for:
+    - Known-good backups before major changes
+    - Backups before updates or migrations
+    - Milestone backups you want to keep long-term
+  </Tab>
+  
+  <Tab title="Unlock Backup">
+    Remove lock protection to allow deletion:
+    
+    1. Click the **Unlock** button on a locked backup
+    2. The lock icon is removed
+    3. Delete button becomes available
+    
+    Only unlock backups you're sure you no longer need.
+  </Tab>
+</Tabs>
+
+API endpoint:
+```bash
+POST /api/client/servers/{server}/backups/{backup}/lock
+```
+
+This endpoint toggles the lock state.
+
+### Delete Backup
+
+Permanently remove a backup to free up space:
+
+<Warning>
+  Backup deletion is permanent and cannot be undone. Locked backups cannot be deleted.
+</Warning>
+
+<Steps>
+  <Step title="Click Delete">
+    Click the **Delete** button next to an unlocked backup.
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    A warning modal asks you to confirm. Review the backup details carefully.
+  </Step>
+  
+  <Step title="Backup Removed">
+    The backup is permanently deleted from storage and removed from your backup list.
+  </Step>
+</Steps>
+
+API endpoint:
+```bash
+DELETE /api/client/servers/{server}/backups/{backup}
+```
+
+## Storage Types
+
+Backups are stored in one of two locations:
+
+<Card title="Wings Storage" icon="server">
+  **Default**: Backups are stored on the Wings daemon's local disk.
+  
+  Advantages:
+  - Fast backup and restore operations
+  - No additional configuration needed
+  - Works offline without internet
+  
+  Considerations:
+  - Limited by Wings node disk space
+  - Backups lost if node fails or disk corrupts
+</Card>
+
+<Card title="S3 Storage" icon="cloud">
+  **Optional**: Backups are uploaded to S3-compatible object storage.
+  
+  Advantages:
+  - Offsite backup protection
+  - Unlimited storage capacity
+  - Backups survive node failures
+  
+  Considerations:
+  - Slower upload and download times
+  - Requires S3 configuration by admin
+  - May incur storage costs
+</Card>
+
+The storage type is configured by your administrator and cannot be changed per-backup.
+
+## Automated Backups
+
+Create automatic backups using [Schedules](/servers/schedules):
+
+<Steps>
+  <Step title="Create Schedule">
+    Navigate to **Schedules** and create a new schedule with your desired timing.
+  </Step>
+  
+  <Step title="Add Backup Task">
+    In the schedule's task manager:
+    1. Select **Backup** action
+    2. Optionally name the backup
+    3. Set time offset to 0 (or delay if needed)
+  </Step>
+  
+  <Step title="Enable Schedule">
+    Ensure the schedule is enabled. Backups will now be created automatically.
+  </Step>
+</Steps>
+
+### Example Automated Backup Schedule
+
+**Hourly Backups**
+- Cron: `0 * * * *` (every hour at :00)
+- Task: Backup named `hourly-{hour}`
+
+**Daily Backups**
+- Cron: `0 3 * * *` (daily at 3 AM)
+- Task: Backup named `daily-{date}`
+
+**Pre-Restart Backup**
+- Cron: `0 4 * * *` (daily at 4 AM)
+- Task 1: Backup named `pre-restart` (offset: 0s)
+- Task 2: Power action `restart` (offset: 60s)
+
+## Backup Limits
+
+Administrators can set backup limits per server:
+
+- **0 = Unlimited**: Create as many backups as disk space allows
+- **3 backups**: Maximum of 3 backups at a time
+- **10 backups**: Maximum of 10 backups at a time
+
+When you reach your limit:
+- Delete old backups before creating new ones
+- Or ask an administrator to increase your limit
+- Locked backups count toward your limit
+
+## Backup Workflow Examples
+
+### Before Major Update
+
+<Steps>
+  <Step title="Create Pre-Update Backup">
+    ```bash
+    Name: "Before 1.20 Update"
+    ```
+  </Step>
+  
+  <Step title="Lock Backup">
+    Lock the backup to prevent accidental deletion.
+  </Step>
+  
+  <Step title="Update Server">
+    Perform your update or changes.
+  </Step>
+  
+  <Step title="Test & Clean Up">
+    If update successful, unlock and delete old backup after a few days. If update fails, restore the backup.
+  </Step>
+</Steps>
+
+### Weekly Rotation
+
+<Steps>
+  <Step title="Keep 4 Weekly Backups">
+    Create a schedule that runs every Sunday at midnight.
+  </Step>
+  
+  <Step title="Name with Date">
+    Name backups like `weekly-2024-01-21` so you know which is which.
+  </Step>
+  
+  <Step title="Delete Oldest">
+    When you have 4 backups, manually delete the oldest one before the next automated backup.
+  </Step>
+</Steps>
+
+## Backup Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular Backups" icon="clock">
+    Create backups on a regular schedule, not just when problems occur. Daily or hourly for active servers.
+  </Card>
+  
+  <Card title="Test Restores" icon="flask">
+    Periodically test restoring backups to a test server to ensure they work correctly.
+  </Card>
+  
+  <Card title="Lock Important Backups" icon="lock">
+    Lock backups before major changes or milestones to prevent accidental deletion.
+  </Card>
+  
+  <Card title="Offsite Copies" icon="cloud">
+    Download important backups to your computer or request S3 storage for offsite protection.
+  </Card>
+  
+  <Card title="Before Changes" icon="shield">
+    Always create a backup before installing plugins, updating versions, or making config changes.
+  </Card>
+  
+  <Card title="Clean Up Old Backups" icon="trash">
+    Delete old backups you no longer need to free up space for new backups.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Backup creation failed">
+    - Check that you have enough disk space on the Wings node
+    - Ensure your server is not suspended
+    - Verify you haven't exceeded your backup limit
+    - Check Wings daemon logs for errors
+  </Accordion>
+  
+  <Accordion title="Cannot delete backup">
+    - Check if the backup is locked (look for lock icon)
+    - Unlock the backup first, then try deleting again
+    - Ensure you have `server.backup.delete` permission
+  </Accordion>
+  
+  <Accordion title="Restore taking too long">
+    - Large backups (> 5 GB) can take 10-15 minutes to restore
+    - Check Wings daemon status to ensure it's running
+    - Monitor server console for progress updates
+  </Accordion>
+  
+  <Accordion title="Download link expired">
+    - Download links are only valid for 5-10 minutes
+    - Click Download again to generate a new link
+    - Start downloading immediately after clicking
+  </Accordion>
+</AccordionGroup>
+
+## API Reference
+
+### List Backups
+
+```bash
+GET /api/client/servers/{server}/backups
+```
+
+<Accordion title="Response Example">
+```json
+{
+  "data": [
+    {
+      "id": "backup-id",
+      "uuid": "backup-uuid",
+      "name": "manual-backup-2024-01-15",
+      "bytes": 52428800,
+      "isSuccessful": true,
+      "isLocked": false,
+      "checksum": "sha256:abc123...",
+      "disk": "wings",
+      "ignoredFiles": "",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "completedAt": "2024-01-15T10:31:45Z"
+    }
+  ]
+}
+```
+</Accordion>
+
+## Permissions
+
+Backup management requires specific permissions:
+
+- **View backups**: `server.backup.read`
+- **Create backups**: `server.backup.create`
+- **Download backups**: `server.backup.read`
+- **Restore backups**: `server.backup.restore`
+- **Delete backups**: `server.backup.delete`
+- **Lock/unlock backups**: `server.backup.update`
+
+Server owners and admins have all permissions by default.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Schedules" icon="clock" href="/servers/schedules">
+    Automate backup creation with scheduled tasks
+  </Card>
+  <Card title="File Management" icon="folder" href="/servers/file-management">
+    Manage individual files between backups
+  </Card>
+</CardGroup>

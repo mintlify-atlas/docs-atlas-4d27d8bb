@@ -1,0 +1,455 @@
+---
+title: 'Wings Integration'
+description: 'How XyraPanel integrates with Pterodactyl Wings for server management'
+icon: 'server'
+---
+
+## Overview
+
+XyraPanel integrates with [Pterodactyl Wings](https://github.com/pterodactyl/wings) to provide server management capabilities. Wings is the server control daemon that runs on each game server node and handles all server operations including file management, power control, and resource monitoring.
+
+## Architecture
+
+The integration follows a secure authentication pattern where:
+
+1. **Panel-to-Wings Communication**: XyraPanel authenticates to Wings using encrypted bearer tokens
+2. **Wings-to-Panel Communication**: Wings authenticates back to the panel for callbacks and SFTP authentication
+3. **Secure Token Storage**: All Wings tokens are encrypted at rest using AES-256-CBC encryption
+
+## Authentication Flow
+
+### Panel to Wings
+
+XyraPanel authenticates to Wings using a two-part token system:
+
+```typescript
+// From: server/utils/wings/encryption.ts
+export function formatAuthToken(tokenId: string, encryptedToken: string): string {
+  const decryptedToken = decryptToken(encryptedToken);
+  return `${tokenId}.${decryptedToken}`;
+}
+```
+
+The authentication token consists of:
+- **Token Identifier**: A unique identifier stored in `wings_nodes.token_identifier`
+- **Token Secret**: An encrypted secret stored in `wings_nodes.token_secret`
+
+<Note>
+  Tokens are encrypted using the `WINGS_ENCRYPTION_KEY`, `NUXT_SESSION_PASSWORD`, or `BETTER_AUTH_SECRET` environment variable. You can reuse your Better Auth secret for Wings encryption.
+</Note>
+
+### Wings to Panel
+
+Wings authenticates back to the panel using the same bearer token:
+
+```typescript
+// From: server/utils/wings/auth.ts
+export async function getNodeIdFromAuth(event: H3Event): Promise<string> {
+  const authHeader = getHeader(event, 'authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw createError({
+      status: 401,
+      message: 'Missing or invalid Wings authentication token',
+    });
+  }
+  
+  const parsed = parseAuthToken(authHeader);
+  const { tokenId, token } = parsed;
+  
+  // Lookup node by token identifier
+  const [node] = await db
+    .select()
+    .from(tables.wingsNodes)
+    .where(eq(tables.wingsNodes.tokenIdentifier, tokenId))
+    .limit(1);
+  
+  // Verify token using constant-time comparison
+  const decryptedToken = decryptToken(node.tokenSecret);
+  if (!constantTimeCompare(token, decryptedToken)) {
+    throw createError({
+      status: 403,
+      message: 'You are not authorized to access this resource.',
+    });
+  }
+  
+  return node.id;
+}
+```
+
+## Wings Client
+
+XyraPanel provides a type-safe Wings client for all API operations:
+
+```typescript
+// From: server/utils/wings/client.ts
+export function createWingsClient(node: WingsNodeConnection) {
+  const baseUrl = `${node.scheme}://${node.fqdn}:${node.daemonListen}`;
+  
+  async function request<T>(
+    path: string,
+    options: {
+      method?: string;
+      body?: unknown;
+      headers?: Record<string, string>;
+    },
+    validate: (data: unknown) => data is T,
+  ): Promise<T> {
+    const url = `${baseUrl}${path}`;
+    const authToken = formatAuthToken(node.tokenId, node.tokenSecret);
+    
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+      ...options.headers,
+    };
+    
+    const response = await fetch(url, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Wings API error: ${response.status} - ${error}`);
+    }
+    
+    const data: unknown = await response.json();
+    if (!validate(data)) {
+      throw new Error(`Wings API returned unexpected response shape for ${path}`);
+    }
+    return data;
+  }
+  
+  return {
+    setPowerState: async (serverUuid: string, action: string) => {
+      return request(`/api/servers/${serverUuid}/power`, {
+        method: 'POST',
+        body: { action },
+      });
+    },
+    
+    sendCommand: async (serverUuid: string, command: string) => {
+      return request(`/api/servers/${serverUuid}/command`, {
+        method: 'POST',
+        body: { command },
+      });
+    },
+    
+    // ... additional methods
+  };
+}
+```
+
+### Available Operations
+
+The Wings client supports the following operations:
+
+<AccordionGroup>
+  <Accordion title="Power Management">
+    - `setPowerState(serverUuid, action)` - Start, stop, restart, or kill a server
+    - Actions: `start`, `stop`, `restart`, `kill`
+  </Accordion>
+  
+  <Accordion title="Command Execution">
+    - `sendCommand(serverUuid, command)` - Send a console command to the server
+  </Accordion>
+  
+  <Accordion title="File Management">
+    - `getFileContents(serverUuid, filePath)` - Read file contents
+    - `writeFile(serverUuid, filePath, content)` - Write file contents
+    - `deleteFiles(serverUuid, files)` - Delete files
+    - `createDirectory(serverUuid, path, name)` - Create directory
+    - `renameFile(serverUuid, root, files)` - Rename files
+    - `copyFile(serverUuid, location)` - Copy file
+    - `compressFiles(serverUuid, root, files)` - Create archive
+    - `decompressFile(serverUuid, root, file)` - Extract archive
+    - `chmodFiles(serverUuid, root, files)` - Change permissions
+    - `pullFile(serverUuid, url, directory)` - Download remote file
+  </Accordion>
+  
+  <Accordion title="Backup Management">
+    - `createBackup(serverUuid)` - Create server backup
+    - `deleteBackup(serverUuid, backupUuid)` - Delete backup
+    - `restoreBackup(serverUuid, backupUuid)` - Restore backup
+    - `getBackupDownloadUrl(serverUuid, backupUuid)` - Get download URL
+  </Accordion>
+  
+  <Accordion title="Server Details">
+    - `getServerDetails(serverUuid)` - Get server state and resource utilization
+  </Accordion>
+</AccordionGroup>
+
+## SFTP Authentication
+
+Wings delegates SFTP authentication to the panel:
+
+```typescript
+// From: server/api/remote/sftp/auth.post.ts
+export default defineEventHandler(async (event: H3Event) => {
+  const body = await readValidatedBodyWithLimit(
+    event,
+    remoteSftpAuthSchema,
+    BODY_SIZE_LIMITS.SMALL,
+  );
+  
+  const { type, username, password: credential } = body;
+  
+  // Parse username format: user.serveruuid
+  const parts = username.split('.');
+  const serverIdentifier = parts[parts.length - 1]!;
+  const userIdentifier = parts.slice(0, -1).join('.');
+  
+  // Verify user and server exist
+  const server = await db
+    .select()
+    .from(tables.servers)
+    .where(eq(tables.servers.uuid, serverIdentifier))
+    .limit(1);
+  
+  const user = await db
+    .select()
+    .from(tables.users)
+    .where(eq(tables.users.username, userIdentifier))
+    .limit(1);
+  
+  // Authenticate based on type (password or public_key)
+  if (type === 'password') {
+    // Verify password using Better Auth
+    await auth.api.signInUsername({
+      body: { username: userIdentifier, password: credential },
+      headers: getAuthHeaders(event),
+    });
+  } else if (type === 'public_key') {
+    // Verify SSH key against stored keys
+    const sshKeys = await db
+      .select()
+      .from(tables.sshKeys)
+      .where(eq(tables.sshKeys.userId, user.id));
+    
+    // Match provided key against stored keys
+  }
+  
+  // Check permissions
+  const isAdmin = user.role === 'admin';
+  const isOwner = server.ownerId === user.id;
+  let permissions: string[] = [];
+  
+  if (isAdmin || isOwner) {
+    permissions = ['*'];
+  } else {
+    // Load subuser permissions
+    const subusers = await listServerSubusers(server.id);
+    const subuser = subusers.find((entry) => entry.userId === user.id);
+    permissions = subuser.permissions;
+  }
+  
+  return {
+    server: server.uuid,
+    user: user.username,
+    permissions,
+  };
+});
+```
+
+### SFTP Username Format
+
+SFTP usernames follow the format: `username.serveruuid`
+
+For example:
+- Username: `john`
+- Server UUID: `abc123`
+- SFTP Username: `john.abc123`
+
+## Node Configuration
+
+XyraPanel automatically generates Wings configuration:
+
+```typescript
+// From: server/api/admin/wings/nodes/[id]/configuration.get.ts
+export default defineEventHandler(async (event) => {
+  const session = await requireAdmin(event);
+  const { id } = getRouterParams(event);
+  
+  const runtimeConfig = useRuntimeConfig();
+  const panelConfig = (runtimeConfig.public?.panel ?? {}) as { baseUrl?: string };
+  const panelUrl = panelConfig.baseUrl || `${requestUrl.protocol}//${requestUrl.host}`;
+  
+  const configuration = await getWingsNodeConfigurationById(id, panelUrl);
+  
+  return { data: configuration };
+});
+```
+
+The generated configuration includes:
+- Panel connection details
+- Authentication tokens
+- System limits (memory, disk, upload size)
+- SFTP settings
+- Remote query endpoint
+
+## Error Handling
+
+XyraPanel provides comprehensive error handling for Wings operations:
+
+```typescript
+// From: server/utils/wings/http.ts
+export function toWingsHttpError(error: unknown, options: WingsErrorOptions = {}) {
+  const operation = options.operation ?? 'contact Wings node';
+  
+  if (isFetchError(error)) {
+    const status = error.response?.status ?? 502;
+    const data = error.data;
+    
+    let message: string | undefined;
+    if (typeof data === 'object' && data !== null && 'message' in data) {
+      message = (data as { message?: unknown }).message;
+    }
+    
+    message = message || `Wings responded with status ${status}.`;
+    
+    return createError({
+      status,
+      message,
+      data: {
+        nodeId: options.nodeId,
+        details: data,
+      },
+      cause: error,
+    });
+  }
+  
+  // Handle specific error cases
+  if (error instanceof Error) {
+    if (error.message === 'No Wings node configured') {
+      return createError({
+        status: 503,
+        message: 'No Wings node configured: Add a Wings node before attempting this operation.',
+      });
+    }
+    
+    if (error.message === 'Multiple Wings nodes configured; specify nodeId') {
+      return createError({
+        status: 400,
+        message: 'Multiple Wings nodes configured: Select a Wings node by providing a node query parameter.',
+      });
+    }
+  }
+  
+  return createError({
+    status: 500,
+    message: `Unexpected Wings error: Unable to ${operation}.`,
+  });
+}
+```
+
+## Security Considerations
+
+<Warning>
+  **Token Security**: Wings tokens grant full access to all servers on a node. Always:
+  - Use strong encryption keys (32+ characters)
+  - Store tokens encrypted at rest
+  - Never log decrypted tokens
+  - Rotate tokens periodically
+</Warning>
+
+### Constant-Time Comparison
+
+Token verification uses constant-time comparison to prevent timing attacks:
+
+```typescript
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  
+  return result === 0;
+}
+```
+
+### Rate Limiting
+
+SFTP authentication includes built-in rate limiting:
+
+```typescript
+const MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (record.count >= MAX_ATTEMPTS) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+```
+
+## Database Schema
+
+Wings nodes are stored in the `wings_nodes` table:
+
+```typescript
+// From: server/database/schema.ts
+export const wingsNodes = pgTable(
+  'wings_nodes',
+  {
+    id: text('id').primaryKey(),
+    uuid: text('uuid').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    baseUrl: text('base_url').notNull(),
+    fqdn: text('fqdn').notNull(),
+    scheme: text('scheme', { enum: ['http', 'https'] }).notNull(),
+    public: boolean('public').notNull().default(true),
+    maintenanceMode: boolean('maintenance_mode').notNull().default(false),
+    allowInsecure: boolean('allow_insecure').notNull().default(false),
+    behindProxy: boolean('behind_proxy').notNull().default(false),
+    memory: integer('memory').notNull(),
+    memoryOverallocate: integer('memory_overallocate').notNull().default(0),
+    disk: integer('disk').notNull(),
+    diskOverallocate: integer('disk_overallocate').notNull().default(0),
+    uploadSize: integer('upload_size').notNull().default(100),
+    daemonBase: text('daemon_base').notNull(),
+    daemonListen: integer('daemon_listen').notNull().default(8080),
+    daemonSftp: integer('daemon_sftp').notNull().default(2022),
+    tokenIdentifier: text('token_identifier').notNull(),
+    tokenSecret: text('token_secret').notNull(),
+    apiToken: text('api_token').notNull(),
+    locationId: text('location_id').references(() => locations.id),
+    lastSeenAt: timestamp('last_seen_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('wings_nodes_base_url_unique').on(table.baseUrl),
+    uniqueIndex('wings_nodes_uuid_unique').on(table.uuid),
+  ],
+);
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="database" href="/advanced/database-schema">
+    Explore the complete database schema
+  </Card>
+  <Card title="Authentication" icon="shield-halved" href="/advanced/authentication">
+    Learn about the authentication system
+  </Card>
+</CardGroup>

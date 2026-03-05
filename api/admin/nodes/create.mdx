@@ -1,0 +1,81 @@
+---
+title: 'Create Node'
+api: 'POST /api/admin/nodes'
+description: 'Create a new Wings node'
+---
+
+<Note>
+Node creation is typically done through the Wings-specific endpoints at `/api/admin/wings/nodes`. This endpoint may be available in future versions.
+</Note>
+
+## Authentication
+
+This endpoint requires admin authentication and the `nodes:write` permission.
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  Node name (1-255 characters)
+</ParamField>
+
+<ParamField body="locationId" type="string" required>
+  UUID of the location to assign this node to
+</ParamField>
+
+<ParamField body="fqdn" type="string" required>
+  Fully qualified domain name or IP address (1-255 characters)
+</ParamField>
+
+<ParamField body="scheme" type="string" default="https">
+  Connection scheme: `http` or `https`
+</ParamField>
+
+<ParamField body="behindProxy" type="boolean" default="false">
+  Whether the node is behind a proxy (affects IP detection)
+</ParamField>
+
+<ParamField body="public" type="boolean" default="true">
+  Whether the node is publicly accessible
+</ParamField>
+
+<ParamField body="maintenanceMode" type="boolean" default="false">
+  Whether the node is in maintenance mode
+</ParamField>
+
+<ParamField body="memory" type="integer" required>
+  Total memory in MB (must be positive)
+</ParamField>
+
+<ParamField body="memoryOverallocate" type="integer" default="0">
+  Memory overallocation percentage (minimum: -1, -1 = unlimited)
+</ParamField>
+
+<ParamField body="disk" type="integer" required>
+  Total disk space in MB (must be positive)
+</ParamField>
+
+<ParamField body="diskOverallocate" type="integer" default="0">
+  Disk overallocation percentage (minimum: -1, -1 = unlimited)
+</ParamField>
+
+<ParamField body="daemonBase" type="string" default="/var/lib/pterodactyl/volumes">
+  Base directory for server files
+</ParamField>
+
+<ParamField body="daemonSftp" type="integer" default="2022">
+  SFTP port (1-65535)
+</ParamField>
+
+<ParamField body="daemonListen" type="integer" default="8080">
+  Wings daemon listen port (1-65535)
+</ParamField>
+
+<ParamField body="uploadSize" type="integer" default="100">
+  Maximum upload size in MB (must be positive)
+</ParamField>
+
+## Notes
+
+- After creating a node, you'll need to configure Wings on the target server
+- Generate a configuration token using the node's configuration endpoint
+- Ensure the FQDN is resolvable and Wings is accessible from the panel

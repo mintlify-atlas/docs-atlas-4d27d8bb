@@ -1,0 +1,333 @@
+---
+title: Security Configuration
+description: Configure CORS, CSP, rate limiting, and security headers
+---
+
+XyraPanel includes comprehensive security features powered by [nuxt-security](https://nuxt-security.vercel.app/). This page covers CORS, Content Security Policy (CSP), rate limiting, and security headers.
+
+## CORS (Cross-Origin Resource Sharing)
+
+<ParamField path="NUXT_SECURITY_CORS_ORIGIN" type="string" required>
+  Comma-separated list of allowed origins for CORS requests.
+  
+  Examples:
+  ```bash
+  # Single origin
+  NUXT_SECURITY_CORS_ORIGIN="https://panel.example.com"
+  
+  # Multiple origins
+  NUXT_SECURITY_CORS_ORIGIN="https://panel.example.com,https://app.example.com"
+  ```
+  
+  <Warning>In development, this defaults to `*` (allow all). Always set explicitly in production!</Warning>
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_CONNECT_SRC" type="string" optional>
+  Additional sources allowed for WebSocket and fetch connections in CSP `connect-src` directive.
+  
+  ```bash
+  NUXT_SECURITY_CONNECT_SRC="https://api.example.com,wss://ws.example.com"
+  ```
+</ParamField>
+
+## Content Security Policy (CSP)
+
+CSP helps prevent XSS attacks by controlling which resources can be loaded.
+
+<ParamField path="NUXT_SECURITY_CSP_REPORT_ONLY" type="boolean" default="false">
+  Enable CSP in report-only mode for testing before enforcement.
+  
+  - `true`: CSP violations are logged but not blocked (recommended for initial setup)
+  - `false`: CSP violations are blocked (use after testing)
+  
+  ```bash
+  # Start in report-only mode
+  NUXT_SECURITY_CSP_REPORT_ONLY="true"
+  
+  # After testing, enforce CSP
+  NUXT_SECURITY_CSP_REPORT_ONLY="false"
+  ```
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_CSP_REPORT_URI" type="string" optional>
+  Endpoint URL for receiving CSP violation reports.
+  
+  ```bash
+  NUXT_SECURITY_CSP_REPORT_URI="https://your-csp-reporter.example.com/report"
+  ```
+  
+  <Note>Consider using services like [report-uri.com](https://report-uri.com/) or [Sentry](https://sentry.io/) for CSP reporting.</Note>
+</ParamField>
+
+### Default CSP Policy
+
+XyraPanel configures CSP with the following directives:
+
+```javascript
+{
+  'default-src': ["'self'"],
+  'connect-src': ["'self'", 'https:', 'wss:', 'ws:'],
+  'img-src': ["'self'", 'data:', 'https:', 'blob:'],
+  'style-src': ["'self'", 'https:', "'unsafe-inline'"],
+  'font-src': ["'self'", 'https:', 'data:'],
+  'script-src': ["'strict-dynamic'", "'nonce-{{nonce}}'", "'self'", 'https:'],
+  'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
+  'object-src': ["'none'"],
+  'base-uri': ["'self'"],
+  'form-action': ["'self'"],
+  'frame-ancestors': ["'none'"],
+  'upgrade-insecure-requests': true
+}
+```
+
+<Note>
+  The CSP policy is automatically disabled in development mode for easier debugging.
+</Note>
+
+## Rate Limiting
+
+Rate limiting protects against brute force attacks and API abuse.
+
+<ParamField path="NUXT_SECURITY_RATE_LIMIT_DRIVER" type="string" default="lruCache">
+  Rate limit storage driver:
+  
+  - `lruCache`: In-memory LRU cache (default, suitable for single instance)
+  - `redis`: Redis-backed storage (recommended for production with multiple instances)
+  
+  ```bash
+  NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+  ```
+  
+  <Warning>When using `redis`, ensure Redis is properly configured. See [Redis Configuration](/configuration/redis).</Warning>
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_RATE_LIMIT_TOKENS" type="number" default="150">
+  Number of requests allowed per interval for global rate limit.
+  
+  ```bash
+  # Allow 150 requests per interval
+  NUXT_SECURITY_RATE_LIMIT_TOKENS="150"
+  ```
+</ParamField>
+
+<ParamField path="NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS" type="number" default="300000">
+  Time window in milliseconds for rate limiting (default: 5 minutes).
+  
+  ```bash
+  # 5 minutes (300000ms)
+  NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="300000"
+  
+  # 1 minute (60000ms)
+  NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="60000"
+  ```
+</ParamField>
+
+### Per-Route Rate Limits
+
+XyraPanel applies stricter rate limits to sensitive endpoints:
+
+| Endpoint | Tokens | Interval | Purpose |
+|----------|--------|----------|----------|
+| `/api/auth/sign-in/**` | 5 | 10 minutes | Prevent login brute force |
+| `/api/auth/forget-password` | 5 | 15 minutes | Prevent password reset abuse |
+| `/api/auth/reset-password` | 8 | 15 minutes | Limit password resets |
+| `/api/user/2fa/**` | 8 | 5 minutes | Protect 2FA operations |
+| `/api/account/password/**` | 8 | 5 minutes | Limit password changes |
+| `/api/admin/**` | 300 | 1 minute | Allow higher admin traffic |
+| `/api/servers/**` | 300 | 1 minute | Server management operations |
+| Global default | 150 | 5 minutes | All other endpoints |
+
+<Note>
+  These limits are defined in `nuxt.config.ts` and can be customized if needed.
+</Note>
+
+## Security Headers
+
+XyraPanel automatically sets secure HTTP headers in production:
+
+### Strict-Transport-Security (HSTS)
+
+```
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+```
+
+Forces HTTPS connections for 1 year.
+
+### X-Frame-Options
+
+```
+X-Frame-Options: DENY
+```
+
+Prevents clickjacking by blocking iframe embedding.
+
+### X-Content-Type-Options
+
+```
+X-Content-Type-Options: nosniff
+```
+
+Prevents MIME-type sniffing.
+
+### Referrer-Policy
+
+```
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+Controls referrer information sent with requests.
+
+### Cross-Origin Policies
+
+```
+Cross-Origin-Embedder-Policy: unsafe-none
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+Cross-Origin-Resource-Policy: cross-origin
+```
+
+<Note>
+  Security headers are automatically disabled in development mode.
+</Note>
+
+## Request Size Limits
+
+<ParamField path="NUXT_MAX_REQUEST_SIZE_MB" type="number" default="10">
+  Maximum size for request bodies in megabytes.
+  
+  ```bash
+  NUXT_MAX_REQUEST_SIZE_MB="10"
+  ```
+</ParamField>
+
+<ParamField path="NUXT_MAX_UPLOAD_SIZE_MB" type="number" default="20">
+  Maximum size for file uploads in megabytes.
+  
+  ```bash
+  NUXT_MAX_UPLOAD_SIZE_MB="20"
+  ```
+</ParamField>
+
+## Configuration Examples
+
+### Development
+
+```bash .env
+# Allow all origins in development
+NUXT_SECURITY_CORS_ORIGIN="http://localhost:3000"
+
+# Use in-memory rate limiting
+NUXT_SECURITY_RATE_LIMIT_DRIVER="lruCache"
+NUXT_SECURITY_RATE_LIMIT_TOKENS="150"
+NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="300000"
+
+# CSP in report-only mode
+NUXT_SECURITY_CSP_REPORT_ONLY="true"
+```
+
+### Production (Single Instance)
+
+```bash .env
+# Restrict to your domain
+NUXT_SECURITY_CORS_ORIGIN="https://panel.example.com"
+NUXT_SECURITY_CONNECT_SRC="https://panel.example.com"
+
+# Redis-backed rate limiting
+NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+NUXT_SECURITY_RATE_LIMIT_TOKENS="150"
+NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="300000"
+
+# Enforce CSP
+NUXT_SECURITY_CSP_REPORT_ONLY="false"
+
+# Request limits
+NUXT_MAX_REQUEST_SIZE_MB="10"
+NUXT_MAX_UPLOAD_SIZE_MB="20"
+```
+
+### Production (Multiple Origins)
+
+```bash .env
+# Multiple allowed origins
+NUXT_SECURITY_CORS_ORIGIN="https://panel.example.com,https://app.example.com"
+NUXT_SECURITY_CONNECT_SRC="https://panel.example.com,https://api.example.com,wss://ws.example.com"
+
+# Redis for shared rate limits
+NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"
+NUXT_SECURITY_RATE_LIMIT_TOKENS="200"
+NUXT_SECURITY_RATE_LIMIT_INTERVAL_MS="300000"
+
+# CSP with reporting
+NUXT_SECURITY_CSP_REPORT_ONLY="false"
+NUXT_SECURITY_CSP_REPORT_URI="https://report-uri.example.com/csp"
+```
+
+## Testing CSP
+
+<Steps>
+  <Step title="Enable report-only mode">
+    Set `NUXT_SECURITY_CSP_REPORT_ONLY="true"` in your `.env` file.
+  </Step>
+  
+  <Step title="Configure reporting (optional)">
+    Set `NUXT_SECURITY_CSP_REPORT_URI` to receive violation reports.
+  </Step>
+  
+  <Step title="Test your application">
+    Use your panel normally and check browser console for CSP violations.
+  </Step>
+  
+  <Step title="Review violations">
+    Fix any legitimate violations by adjusting your CSP or code.
+  </Step>
+  
+  <Step title="Enforce CSP">
+    Set `NUXT_SECURITY_CSP_REPORT_ONLY="false"` to enforce the policy.
+  </Step>
+</Steps>
+
+## Monitoring Rate Limits
+
+Rate limit status is included in response headers:
+
+```
+X-RateLimit-Limit: 150
+X-RateLimit-Remaining: 149
+X-RateLimit-Reset: 1234567890
+```
+
+Clients can use these headers to implement backoff strategies.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always use Redis for production">
+    Use `NUXT_SECURITY_RATE_LIMIT_DRIVER="redis"` in production environments, especially with multiple instances. LRU cache is only suitable for single-instance development.
+  </Accordion>
+  
+  <Accordion title="Test CSP in report-only mode first">
+    Enable `NUXT_SECURITY_CSP_REPORT_ONLY="true"` initially to identify issues before enforcing the policy.
+  </Accordion>
+  
+  <Accordion title="Restrict CORS to specific origins">
+    Never use `*` for `NUXT_SECURITY_CORS_ORIGIN` in production. Always specify exact origins.
+  </Accordion>
+  
+  <Accordion title="Monitor rate limit hits">
+    Watch for `429 Too Many Requests` responses in your logs to identify potential attacks or misconfigured clients.
+  </Accordion>
+  
+  <Accordion title="Adjust limits for your traffic">
+    The default rate limits work for most deployments, but high-traffic instances may need higher limits.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Redis Configuration" icon="database" href="/configuration/redis">
+    Set up Redis for rate limiting
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/configuration/environment-variables">
+    View all configuration options
+  </Card>
+</CardGroup>

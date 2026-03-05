@@ -1,0 +1,540 @@
+---
+title: 'Mount Management'
+description: 'Share files and directories across servers'
+icon: 'folder-tree'
+---
+
+## What are Mounts?
+
+Mounts allow you to share directories from the host system (or Wings node) with game server containers. This enables:
+
+- **Shared resources**: Maps, plugins, or mods used across multiple servers
+- **Configuration templates**: Pre-configured files for new servers
+- **Read-only data**: Game assets, documentation, or libraries
+- **Central storage**: Logs, backups, or shared databases
+
+## How Mounts Work
+
+```
+Host System (Wings Node)          Server Container
+/shared/maps/                →    /mnt/shared/maps/
+/shared/plugins/              →    /mnt/shared/plugins/
+/templates/config/            →    /mnt/templates/ (read-only)
+```
+
+Mounts use Docker bind mounts to attach host directories into containers.
+
+## Creating a Mount
+
+<Steps>
+  <Step title="Navigate to mounts">
+    Go to **Admin** > **Mounts** in the panel.
+  </Step>
+
+  <Step title="Create mount">
+    Click **Create Mount** and configure:
+
+    **Name** (required)
+    - Friendly identifier
+    - Example: "Shared Maps", "Plugin Library", "Game Assets"
+
+    **Description** (optional)
+    - What the mount contains and its purpose
+    - Example: "Community-built maps for Minecraft servers"
+
+    **Source** (required)
+    - Path on the **host system** (Wings node)
+    - Must be an absolute path
+    - Example: `/mnt/shared/maps`, `/opt/game-assets`
+
+    **Target** (required)
+    - Path inside the **container**
+    - Must be an absolute path
+    - Example: `/mnt/maps`, `/home/container/shared`
+
+    **Read-Only**
+    - Enable to prevent servers from modifying files
+    - Recommended for templates and assets
+
+    **User Mountable**
+    - Allow server owners to enable/disable this mount
+    - Otherwise, only admins can assign mounts
+  </Step>
+
+  <Step title="Assign to eggs and nodes">
+    **Eggs**: Which server types can use this mount  
+    **Nodes**: Which nodes have access to the source directory
+
+    Example:
+    - Mount "Minecraft Maps" → Assign to Vanilla, Paper, Forge eggs
+    - Only assign to nodes with `/mnt/shared/maps` available
+  </Step>
+
+  <Step title="Save mount">
+    Click **Create Mount**. Servers using assigned eggs on assigned nodes can now access the mount.
+  </Step>
+</Steps>
+
+## Mount Configuration
+
+### Source Path (Host)
+
+The directory on the Wings node:
+
+```bash
+# Create shared directory
+mkdir -p /mnt/shared/maps
+chown -R 1000:1000 /mnt/shared/maps  # Container user
+chmod 755 /mnt/shared/maps
+
+# Add sample files
+cp world_map_1.zip /mnt/shared/maps/
+```
+
+**Requirements**:
+- Must exist on all assigned nodes
+- Permissions must allow container access (UID 1000 typically)
+- Should be persistent storage (not tmpfs)
+
+### Target Path (Container)
+
+Where files appear inside the server:
+
+```bash
+# Server sees:
+/home/container/
+├── server.jar
+├── plugins/
+└── mnt/
+    └── maps/           ← Mount target
+        └── world_map_1.zip
+```
+
+**Best practices**:
+- Use `/mnt/` prefix to distinguish mounts from server files
+- Avoid overwriting critical paths (`/home/container/`, `/tmp/`)
+- Document the target path for server owners
+
+### Read-Only Mounts
+
+Enable **Read-Only** to:
+- Protect shared assets from modification
+- Prevent accidental deletion
+- Enforce consistency across servers
+
+```bash
+# Read-only mount
+Source: /opt/game-assets
+Target: /mnt/assets
+Read-Only: ✅
+
+# Server can read but not write
+cat /mnt/assets/config.yml    # ✅ Works
+echo "test" > /mnt/assets/test.txt  # ❌ Permission denied
+```
+
+### User Mountable
+
+When enabled, server owners can:
+- See available mounts in server settings
+- Enable/disable mounts for their server
+- Control which shared resources they use
+
+When disabled:
+- Only admins can assign mounts
+- Users don't see mount options
+- Useful for mandatory mounts (e.g., licensing files)
+
+## Assigning Mounts
+
+### Assign to Eggs
+
+Mounts are available to specific server types:
+
+```
+Mount: "Shared Plugins"
+Assigned Eggs:
+  ✅ Minecraft: Paper
+  ✅ Minecraft: Spigot
+  ✅ Minecraft: Forge
+  ❌ Counter-Strike: GO (not assigned)
+```
+
+**Why per-egg?**
+- Different games have different mount needs
+- Prevents incompatible mounts (Java plugins in Source engine servers)
+- Controls which server types access shared resources
+
+### Assign to Nodes
+
+Mounts are only available on nodes that have the source directory:
+
+```
+Mount: "Shared Maps"
+Source: /mnt/shared/maps
+
+Assigned Nodes:
+  ✅ US-East-1 (has /mnt/shared/maps)
+  ✅ US-East-2 (has /mnt/shared/maps)
+  ❌ EU-West-1 (doesn't have directory)
+```
+
+**Node assignment ensures**:
+- Mounts only work where files exist
+- Avoids errors from missing directories
+- Supports node-specific storage configurations
+
+## Use Cases
+
+### Shared Plugin Library
+
+**Scenario**: Provide common Minecraft plugins to all servers.
+
+```
+Name: Plugin Library
+Source: /mnt/shared/plugins
+Target: /mnt/plugins
+Read-Only: ✅
+User Mountable: ✅
+
+Eggs: Paper, Spigot, Forge
+Nodes: All
+```
+
+Servers can copy plugins from `/mnt/plugins/` to their own `/home/container/plugins/` directory.
+
+### Map Repository
+
+**Scenario**: Share pre-built maps across servers.
+
+```
+Name: Community Maps
+Source: /mnt/shared/maps
+Target: /mnt/maps
+Read-Only: ✅
+User Mountable: ✅
+
+Eggs: Minecraft (all variants)
+```
+
+Users extract maps from `/mnt/maps/` to their world folder.
+
+### Configuration Templates
+
+**Scenario**: Provide starter configuration files.
+
+```
+Name: Config Templates
+Source: /mnt/templates/configs
+Target: /mnt/templates
+Read-Only: ✅
+User Mountable: ❌
+
+Eggs: (assigned by admin as needed)
+```
+
+Install scripts copy templates to server directories during setup.
+
+### Centralized Logging
+
+**Scenario**: Collect logs from all servers.
+
+```
+Name: Log Collection
+Source: /mnt/logs
+Target: /mnt/logs
+Read-Only: ❌
+User Mountable: ❌
+
+Eggs: All
+Nodes: All
+```
+
+Servers write logs to `/mnt/logs/${SERVER_ID}/` for centralized analysis.
+
+### License Files
+
+**Scenario**: Provide read-only license/key files.
+
+```
+Name: Game Licenses
+Source: /opt/licenses
+Target: /mnt/licenses
+Read-Only: ✅
+User Mountable: ❌
+
+Eggs: Licensed game eggs
+```
+
+Servers access required license files without exposing them for download.
+
+## Managing Mounts
+
+### Viewing Mounts
+
+The mount list displays:
+- **Name** and description
+- **Source → Target** paths
+- **Read-Only** and **User Mountable** badges
+- **Egg count**, **Node count**, **Server count**
+
+### Editing Mounts
+
+<Warning>
+  Changing mount paths affects all servers using the mount. Active servers may need a restart to see changes.
+</Warning>
+
+You can modify:
+- Name and description
+- Source and target paths (use caution)
+- Read-only flag
+- User mountable flag
+- Egg and node assignments
+
+### Deleting Mounts
+
+<Steps>
+  <Step title="Check server usage">
+    The mount list shows how many servers use each mount.
+  </Step>
+
+  <Step title="Remove from servers">
+    If servers are using the mount:
+    1. Notify server owners
+    2. Unassign mount from eggs
+    3. Wait for servers to be rebuilt or restarted
+  </Step>
+
+  <Step title="Delete mount">
+    Click the **trash icon** and confirm deletion.
+  </Step>
+</Steps>
+
+<Warning>
+  Deleting a mount removes it from all servers. Files on the host system are not deleted.
+</Warning>
+
+## Server Usage
+
+### Enabling Mounts (User Mountable)
+
+If **User Mountable** is enabled:
+
+1. Server owner goes to **Server Settings** > **Mounts**
+2. Sees available mounts for their egg
+3. Toggles mounts on/off
+4. Rebuilds server container to apply changes
+
+### Accessing Mount Contents
+
+Inside the server container:
+
+```bash
+# List mount contents
+ls -la /mnt/plugins/
+
+# Copy plugin to server
+cp /mnt/plugins/EssentialsX.jar /home/container/plugins/
+
+# Symlink entire directory (if not read-only)
+ln -s /mnt/maps/world_map_1 /home/container/world
+```
+
+## Security Considerations
+
+### Read-Only by Default
+
+✅ **Use read-only for**:
+- Shared assets (maps, plugins, mods)
+- Configuration templates
+- License files
+- Documentation
+
+❌ **Avoid read-only for**:
+- Log collection (needs write access)
+- Shared databases (requires modifications)
+- Collaborative file editing
+
+### Path Traversal
+
+<Warning>
+  Always use absolute paths. Relative paths or `..` can lead to security issues.
+</Warning>
+
+✅ **Safe paths**:
+```
+/mnt/shared/plugins
+/opt/game-assets
+/srv/templates
+```
+
+❌ **Dangerous paths**:
+```
+../../../etc/passwd
+/home/container/../../../
+relative/path
+```
+
+### Container Escape
+
+<Warning>
+  Never mount sensitive system directories into containers.
+</Warning>
+
+❌ **Never mount**:
+```
+/etc/
+/root/
+/var/lib/docker/
+/sys/
+/proc/
+```
+
+✅ **Safe to mount**:
+```
+/mnt/
+/opt/
+/srv/
+/home/shared/
+```
+
+### Permissions
+
+Ensure container user (UID 1000) has appropriate access:
+
+```bash
+# Read-only mount
+chown -R 1000:1000 /mnt/shared/maps
+chmod 755 /mnt/shared/maps
+chmod 644 /mnt/shared/maps/*
+
+# Writable mount
+chown -R 1000:1000 /mnt/logs
+chmod 775 /mnt/logs
+```
+
+## Troubleshooting
+
+### Mount not available in server
+
+**Check**:
+1. Mount is assigned to server's egg
+2. Mount is assigned to server's node
+3. Server has been rebuilt after mount assignment
+4. Source directory exists on the node
+
+### Permission denied when accessing mount
+
+**Verify**:
+```bash
+# On Wings node
+ls -la /mnt/shared/
+namei -l /mnt/shared/maps/
+
+# Should show UID 1000 can access
+```
+
+**Fix permissions**:
+```bash
+chown -R 1000:1000 /mnt/shared/
+chmod 755 /mnt/shared/
+```
+
+### Files not appearing in container
+
+**Restart server**:
+Changes to mounts require container rebuild:
+1. Stop server
+2. Start server (triggers rebuild)
+3. Mounts are applied
+
+**Verify mount**:
+```bash
+# From server console
+ls /mnt/
+```
+
+### Cannot write to mount
+
+**Check if read-only**:
+- Edit mount in panel
+- Disable **Read-Only**
+- Rebuild server
+
+**Verify permissions**:
+```bash
+# Container user must own directory
+chown 1000:1000 /mnt/shared/logs
+```
+
+## Best Practices
+
+### Organization
+
+✅ **Structured paths**:
+```
+/mnt/shared/
+├── maps/
+│   ├── minecraft/
+│   └── csgo/
+├── plugins/
+│   ├── essentials/
+│   └── worldedit/
+└── templates/
+    ├── configs/
+    └── scripts/
+```
+
+❌ **Flat structure**:
+```
+/mnt/shared/
+├── map1.zip
+├── plugin2.jar
+├── config.yml
+└── ...
+```
+
+### Documentation
+
+Document mounts for users:
+
+```markdown
+# Available Mounts
+
+## Plugin Library (/mnt/plugins)
+Community-approved plugins. Copy to your server's plugins folder.
+
+## Map Repository (/mnt/maps)
+Pre-built worlds. Extract to your server directory.
+
+## Templates (/mnt/templates)
+Read-only starter configurations.
+```
+
+### Maintenance
+
+```bash
+# Regular cleanup script
+#!/bin/bash
+
+# Remove old map versions
+find /mnt/shared/maps -name "*.old" -mtime +30 -delete
+
+# Update plugin library
+rsync -av /var/plugins/approved/ /mnt/shared/plugins/
+
+# Check disk usage
+df -h /mnt/shared
+du -sh /mnt/shared/*
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Nodes" icon="server" href="/admin/nodes">
+    Configure node storage for mount sources
+  </Card>
+  <Card title="Eggs and Nests" icon="box" href="/admin/eggs-and-nests">
+    Assign mounts to specific server types
+  </Card>
+</CardGroup>

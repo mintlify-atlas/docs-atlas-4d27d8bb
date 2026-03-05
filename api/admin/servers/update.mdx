@@ -1,0 +1,106 @@
+---
+title: 'Update Server Build'
+api: 'PATCH /api/admin/servers/:id'
+description: 'Update server resource limits and configuration'
+---
+
+## Authentication
+
+This endpoint requires admin authentication and the `servers:write` permission.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Server ID or UUID
+</ParamField>
+
+## Request Body
+
+<ParamField body="cpu" type="number">
+  CPU limit percentage (minimum: 0)
+</ParamField>
+
+<ParamField body="memory" type="number">
+  Memory limit in MB (minimum: 0)
+</ParamField>
+
+<ParamField body="swap" type="number">
+  Swap space in MB (minimum: -1, -1 = unlimited)
+</ParamField>
+
+<ParamField body="disk" type="number">
+  Disk space in MB (minimum: 0)
+</ParamField>
+
+<ParamField body="io" type="number">
+  Block I/O weight (10-1000)
+</ParamField>
+
+<ParamField body="threads" type="string" nullable>
+  CPU thread pinning (e.g., "0-3,8")
+</ParamField>
+
+<ParamField body="oomDisabled" type="boolean">
+  Disable OOM killer
+</ParamField>
+
+<ParamField body="databaseLimit" type="integer" nullable>
+  Database limit (null = unlimited)
+</ParamField>
+
+<ParamField body="allocationLimit" type="integer" nullable>
+  Additional allocation limit (null = unlimited)
+</ParamField>
+
+<ParamField body="backupLimit" type="integer" nullable>
+  Backup limit (null = unlimited)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="Success Object">
+    <ResponseField name="success" type="boolean">
+      Whether the update was successful
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X PATCH "https://panel.example.com/api/admin/servers/a1b2c3d4" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "memory": 4096,
+    "cpu": 200,
+    "disk": 20480,
+    "databaseLimit": 2,
+    "backupLimit": 5
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "success": true,
+    "message": "Build configuration updated successfully"
+  }
+}
+```
+</ResponseExample>
+
+## Notes
+
+- Updates are applied to the database immediately
+- The server configuration is synchronized with Wings after database update
+- If Wings sync fails, an error is returned but database changes persist
+- Changes will be applied on next server restart if sync fails
+- Only provided fields are updated; omitted fields remain unchanged

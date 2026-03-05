@@ -1,0 +1,257 @@
+---
+title: "Sessions"
+description: "Manage active user sessions"
+---
+
+## List Sessions
+
+<RequestExample>
+```bash GET /api/account/sessions
+curl -X GET "https://panel.example.com/api/account/sessions?page=1&limit=50" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+Retrieve a paginated list of active sessions for the authenticated user.
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  The page number to retrieve (minimum: 1).
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Number of items per page (minimum: 1, maximum: 100).
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  Array of session objects.
+  
+  <Expandable title="Session Object">
+    <ResponseField name="token" type="string" required>
+      The session token identifier.
+    </ResponseField>
+    
+    <ResponseField name="issuedAt" type="string" required>
+      ISO 8601 timestamp of when the session was created.
+    </ResponseField>
+    
+    <ResponseField name="expiresAt" type="string" required>
+      ISO 8601 timestamp of when the session expires.
+    </ResponseField>
+    
+    <ResponseField name="expiresAtTimestamp" type="number" required>
+      Unix timestamp (milliseconds) of expiration time.
+    </ResponseField>
+    
+    <ResponseField name="isCurrent" type="boolean" required>
+      Whether this is the current session making the request.
+    </ResponseField>
+    
+    <ResponseField name="ipAddress" type="string" required>
+      The IP address associated with this session.
+    </ResponseField>
+    
+    <ResponseField name="userAgent" type="string" required>
+      The user agent string from the session.
+    </ResponseField>
+    
+    <ResponseField name="browser" type="string" required>
+      Parsed browser name from the user agent.
+    </ResponseField>
+    
+    <ResponseField name="os" type="string" required>
+      Parsed operating system name from the user agent.
+    </ResponseField>
+    
+    <ResponseField name="device" type="string" required>
+      Parsed device name from the user agent.
+    </ResponseField>
+    
+    <ResponseField name="lastSeenAt" type="string | null" required>
+      ISO 8601 timestamp of when the session was last active.
+    </ResponseField>
+    
+    <ResponseField name="firstSeenAt" type="string | null" required>
+      ISO 8601 timestamp of when the session was first seen.
+    </ResponseField>
+    
+    <ResponseField name="fingerprint" type="string | null" required>
+      Browser fingerprint (only available for current session).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="currentToken" type="string | null">
+  The token of the current session, if available.
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata.
+  
+  <Expandable title="properties">
+    <ResponseField name="page" type="number" required>
+      Current page number.
+    </ResponseField>
+    
+    <ResponseField name="perPage" type="number" required>
+      Number of items per page.
+    </ResponseField>
+    
+    <ResponseField name="total" type="number" required>
+      Total number of sessions.
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="number" required>
+      Total number of pages.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "data": [
+    {
+      "token": "session_abc123xyz789",
+      "issuedAt": "2024-03-01T10:00:00.000Z",
+      "expiresAt": "2024-03-31T10:00:00.000Z",
+      "expiresAtTimestamp": 1711882800000,
+      "isCurrent": true,
+      "ipAddress": "192.168.1.100",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "browser": "Chrome",
+      "os": "Windows 10",
+      "device": "Desktop",
+      "lastSeenAt": "2024-03-15T14:30:00.000Z",
+      "firstSeenAt": "2024-03-01T10:00:00.000Z",
+      "fingerprint": "fp_1a2b3c4d5e6f"
+    }
+  ],
+  "currentToken": "session_abc123xyz789",
+  "pagination": {
+    "page": 1,
+    "perPage": 50,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+</ResponseExample>
+
+## Delete All Sessions
+
+<RequestExample>
+```bash DELETE /api/account/sessions
+curl -X DELETE "https://panel.example.com/api/account/sessions?includeCurrent=false" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+Revoke all other sessions, optionally including the current session.
+
+### Query Parameters
+
+<ParamField query="includeCurrent" type="boolean" default="false">
+  Whether to revoke the current session as well. If `true`, you will be logged out.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="object">
+  Information about the revocation.
+  
+  <Expandable title="properties">
+    <ResponseField name="revoked" type="number" required>
+      The number of sessions revoked (always 1 in current implementation).
+    </ResponseField>
+    
+    <ResponseField name="currentSessionRevoked" type="boolean" required>
+      Whether the current session was revoked.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response (includeCurrent=false)
+{
+  "data": {
+    "revoked": 1,
+    "currentSessionRevoked": false
+  }
+}
+```
+
+```json Response (includeCurrent=true)
+{
+  "data": {
+    "revoked": 1,
+    "currentSessionRevoked": true
+  }
+}
+```
+</ResponseExample>
+
+<Warning>
+  Setting `includeCurrent=true` will revoke your current session and log you out.
+</Warning>
+
+## Delete Specific Session
+
+<RequestExample>
+```bash DELETE /api/account/sessions/{token}
+curl -X DELETE "https://panel.example.com/api/account/sessions/session_abc123xyz789" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</RequestExample>
+
+Revoke a specific session by its token.
+
+### Path Parameters
+
+<ParamField path="token" type="string" required>
+  The session token to revoke.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="object">
+  Information about the revocation.
+  
+  <Expandable title="properties">
+    <ResponseField name="revoked" type="boolean" required>
+      Whether the session was successfully revoked.
+    </ResponseField>
+    
+    <ResponseField name="currentSessionRevoked" type="boolean" required>
+      Whether the revoked session was the current session.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "data": {
+    "revoked": true,
+    "currentSessionRevoked": false
+  }
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+<ResponseField name="400" type="error">
+  Missing session token in request path.
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  Session not found or failed to revoke.
+</ResponseField>
+
+<Warning>
+  Revoking your current session will log you out immediately.
+</Warning>

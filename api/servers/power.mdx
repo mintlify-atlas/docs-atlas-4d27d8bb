@@ -1,0 +1,168 @@
+---
+title: 'Server Power Actions'
+description: 'Control server power state (start, stop, restart, kill)'
+api: 'POST /api/client/servers/:server/power'
+---
+
+Sends a power action command to the server. This endpoint communicates with the Wings daemon to control the server's running state.
+
+## Authentication
+
+Requires a valid session token and the `server.power` permission on the specified server.
+
+## Path Parameters
+
+<ParamField path="server" type="string" required>
+  Server identifier (short identifier or UUID)
+</ParamField>
+
+## Request Body
+
+<ParamField body="action" type="string" required>
+  The power action to perform. Must be one of:
+  - `start` - Start the server if it's stopped
+  - `stop` - Gracefully stop the server
+  - `restart` - Restart the server (graceful stop followed by start)
+  - `kill` - Forcefully terminate the server process
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Power action result
+  <Expandable title="Result">
+    <ResponseField name="success" type="boolean" required>
+      Whether the power action was sent successfully
+    </ResponseField>
+    <ResponseField name="message" type="string" required>
+      Confirmation message describing the action
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Start Server
+curl -X POST "https://panel.example.com/api/client/servers/my-server/power" \
+  -H "Cookie: session=your-session-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "start"
+  }'
+```
+
+```bash Stop Server
+curl -X POST "https://panel.example.com/api/client/servers/my-server/power" \
+  -H "Cookie: session=your-session-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "stop"
+  }'
+```
+
+```bash Restart Server
+curl -X POST "https://panel.example.com/api/client/servers/my-server/power" \
+  -H "Cookie: session=your-session-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "restart"
+  }'
+```
+
+```bash Kill Server
+curl -X POST "https://panel.example.com/api/client/servers/my-server/power" \
+  -H "Cookie: session=your-session-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "kill"
+  }'
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "data": {
+    "success": true,
+    "message": "Power action start sent successfully"
+  }
+}
+```
+
+## Power Action Behavior
+
+### Start
+Attempts to start the server if it's currently stopped. If the server is already running, this may result in an error from the Wings daemon.
+
+### Stop
+Sends a graceful shutdown signal to the server process. The server application will receive a termination signal and have time to save data and shut down cleanly.
+
+### Restart
+Performs a graceful stop followed by a start. This is equivalent to running stop and then start sequentially.
+
+### Kill
+Forcefully terminates the server process without allowing it to shut down gracefully. Use this only when the server is unresponsive or when a normal stop fails.
+
+<Warning>
+  The `kill` action terminates the server process immediately without giving it time to save data. This may result in data loss or corruption. Use with caution.
+</Warning>
+
+## Error Responses
+
+<ResponseField name="400" type="Bad Request">
+  Invalid action value or missing server identifier
+  ```json
+  {
+    "status": 400,
+    "message": "Invalid power action. Must be one of: start, stop, restart, kill"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User lacks `server.power` permission or Wings authentication failed
+  ```json
+  {
+    "status": 403,
+    "message": "Wings authentication failed: Invalid token"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Server not found or user does not have access
+</ResponseField>
+
+<ResponseField name="503" type="Service Unavailable">
+  Wings daemon is unavailable or unreachable
+  ```json
+  {
+    "status": 503,
+    "message": "Wings daemon unavailable: Connection timeout"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Unknown error occurred while sending power action
+  ```json
+  {
+    "status": 500,
+    "message": "Failed to send power action to Wings: Unknown error"
+  }
+  ```
+</ResponseField>
+
+## Activity Logging
+
+All power actions are logged to the server activity log. The activity entry includes:
+- Actor (user who performed the action)
+- Action type (e.g., `server.power.start`)
+- Timestamp
+- Metadata containing the specific power action
+
+You can view these logs via the server activity endpoint or the panel UI.

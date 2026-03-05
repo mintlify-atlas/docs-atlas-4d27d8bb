@@ -1,0 +1,213 @@
+---
+title: 'Node Management'
+description: 'Add and configure Wings nodes to host game servers'
+icon: 'server'
+---
+
+## What are Nodes?
+
+Nodes are physical or virtual servers running the Wings daemon that host your game servers. Each node provides compute resources (CPU, RAM, disk) and network allocations for servers to use.
+
+**Wings** is the server control daemon that communicates with the XyraPanel to manage server containers, file systems, and networking.
+
+## Adding a Wings Node
+
+<Steps>
+  <Step title="Register the node">
+    Navigate to **Admin** > **Nodes** and click **Add Node**.
+
+    Fill in the node details:
+    - **Name**: Friendly identifier (e.g., "US-East-1")
+    - **Description**: Optional details about the node location or purpose
+    - **Base URL**: The Wings API endpoint (e.g., `https://node1.example.com`)
+    - **API Token**: Optional pre-shared token for authentication
+    - **Allow Insecure TLS**: Disable TLS verification (not recommended for production)
+  </Step>
+
+  <Step title="Issue deployment token">
+    After registration, click the **terminal icon** next to your node to generate a deployment command.
+
+    The command includes:
+    - `--panel-url`: Your panel URL
+    - `--node`: Node UUID
+    - `--token`: One-time configuration token
+    - `--allow-insecure`: If TLS verification is disabled
+
+    ```bash
+    wings configure --panel-url https://panel.example.com --node abc123 --token xyz789
+    ```
+  </Step>
+
+  <Step title="Deploy Wings on the server">
+    SSH into your node server and run the configuration command. This will:
+    - Create the Wings configuration file at `/etc/pterodactyl/config.yml`
+    - Register the node with your panel
+    - Enable the Wings service
+
+    Start the Wings daemon:
+    ```bash
+    systemctl enable --now wings
+    ```
+  </Step>
+
+  <Step title="Verify connection">
+    Return to the admin panel and check the node status badge:
+    - **Configured**: Token is registered
+    - **Missing Token**: Wings hasn't connected yet
+
+    View system information by clicking the **activity icon** to see:
+    - Wings version
+    - CPU threads
+    - Physical memory
+    - Docker version
+    - Storage driver
+  </Step>
+</Steps>
+
+<Warning>
+  Nodes must be associated with a **Location** before they can host servers. Create locations first if you haven't already.
+</Warning>
+
+## Managing Allocations
+
+Allocations are IP:Port combinations that servers bind to for network access.
+
+### Creating Allocations
+
+<Steps>
+  <Step title="Navigate to node details">
+    Click on a node name to view its detail page, then select the **Allocations** tab.
+  </Step>
+
+  <Step title="Add allocations">
+    Click **Create Allocations** and specify:
+    - **IP Address or CIDR**: Single IP (`192.0.2.1`) or range (`192.0.2.0/24`)
+    - **Ports**: Comma-separated ports or ranges (e.g., `25565, 25570-25580`)
+    - **IP Alias** (optional): Display name for the IP
+
+    Example:
+    ```
+    IP: 192.0.2.1
+    Ports: 25565-25600, 27015
+    ```
+
+    This creates 37 allocations (36 from the range + 1 individual port).
+  </Step>
+</Steps>
+
+<Warning>
+  Large CIDR ranges with many ports can create thousands of allocations. The system will prompt for confirmation if creating more than 10,000 allocations.
+</Warning>
+
+### Allocation Status
+
+- **Available** (green): Not assigned to any server
+- **Primary** (blue): Server's main connection point
+- **Additional** (gray): Extra ports assigned to a server
+
+## Node Configuration
+
+### Downloading Configuration
+
+Click the **download icon** next to a node to download its Wings configuration as JSON. This is useful for:
+- Backing up node configurations
+- Manually deploying Wings on air-gapped servers
+- Troubleshooting connection issues
+
+### System Information
+
+The **System Snapshot** card shows real-time data from Wings:
+```json
+{
+  "version": "1.11.0",
+  "system": {
+    "cpu_threads": 8,
+    "memory_bytes": 16777216000,
+    "kernel_version": "5.15.0-91-generic",
+    "os": "Ubuntu 22.04.3 LTS"
+  },
+  "docker": {
+    "version": "24.0.7",
+    "storage": {
+      "driver": "overlay2"
+    }
+  }
+}
+```
+
+## Maintenance Actions
+
+### Sync Node
+Refreshes the node status and system information from Wings. Use this after:
+- Restarting the Wings daemon
+- Updating Wings
+- Network configuration changes
+
+### Rotate Tokens
+Generates a new authentication token and invalidates the previous one. The Wings daemon will automatically use the new token.
+
+<Warning>
+  Rotating tokens will temporarily disconnect Wings until it receives the new token. Active servers will continue running.
+</Warning>
+
+### Transfer Servers
+Move servers from one node to another. This is useful for:
+- Load balancing
+- Node maintenance
+- Hardware upgrades
+
+During transfer:
+1. Server is stopped on the source node
+2. Files are transferred to the target node
+3. Server is recreated on the target node
+4. Allocations are reassigned
+
+## Node Settings
+
+From the **Settings** tab, configure:
+
+### Resource Limits
+- **Memory**: Total RAM available for servers (MiB)
+- **Memory Overallocation**: Allow provisioning more than physical RAM (-1 = unlimited, 0 = disabled)
+- **Disk**: Total disk space for servers (MiB)
+- **Disk Overallocation**: Allow provisioning more than physical disk
+
+### Network Configuration
+- **FQDN**: Fully qualified domain name for the node
+- **Scheme**: HTTP or HTTPS
+- **Behind Proxy**: Enable if using Cloudflare or reverse proxy
+- **Public**: Make node visible to users
+
+### Daemon Configuration
+- **Daemon Listen Port**: Wings HTTP port (default: 8080)
+- **Daemon SFTP Port**: SFTP port for file access (default: 2022)
+- **Daemon Base Directory**: Container volume storage path
+- **Upload Size Limit**: Maximum file upload size (MB)
+
+## Troubleshooting
+
+### Node shows "Missing Token"
+- Generate a new token and run the configuration command
+- Check if Wings is running: `systemctl status wings`
+- Verify the Wings config at `/etc/pterodactyl/config.yml`
+
+### System information unavailable
+- Ensure Wings is running and accessible
+- Check firewall rules for the daemon listen port
+- Verify SSL certificates if using HTTPS
+
+### Allocations not available
+- Confirm the IP address is bound to the node server
+- Check iptables/firewall rules for the port range
+- Verify Docker networking configuration
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Locations" icon="map-pin" href="/admin/locations">
+    Organize nodes by geographic region or data center
+  </Card>
+  <Card title="Eggs and Nests" icon="box" href="/admin/eggs-and-nests">
+    Configure server types that can run on nodes
+  </Card>
+</CardGroup>

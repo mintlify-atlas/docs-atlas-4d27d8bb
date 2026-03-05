@@ -1,0 +1,636 @@
+---
+title: 'Authentication System'
+description: 'Authentication system using Better Auth with API keys and sessions'
+icon: 'shield-halved'
+---
+
+## Overview
+
+XyraPanel uses [Better Auth](https://www.better-auth.com/) as its authentication foundation, providing a secure, type-safe authentication system with support for:
+
+- Email/password authentication
+- Username-based login
+- Two-factor authentication (TOTP)
+- API key authentication
+- OAuth providers (extensible)
+- Session management
+- Multi-session support
+- Account linking
+- Admin impersonation
+
+## Better Auth Configuration
+
+The authentication system is configured in `server/utils/auth.ts`:
+
+```typescript
+// From: server/utils/auth.ts
+export function createAuth() {
+  const runtimeConfig = useRuntimeConfig();
+  const db = useAuthDb();
+  
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: 'pg',
+      schema: {
+        user: tables.users,
+        session: tables.sessions,
+        account: tables.accounts,
+        verificationToken: tables.verificationTokens,
+        rateLimit: tables.rateLimit,
+        apikey: tables.apiKeys,
+        twoFactor: tables.twoFactor,
+        jwks: tables.jwks,
+      },
+    }),
+    
+    session: {
+      expiresIn: 14 * 24 * 60 * 60, // 14 days
+      updateAge: 12 * 60 * 60,      // 12 hours
+      freshAge: 5 * 60,             // 5 minutes
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60,
+        strategy: 'compact',
+      },
+    },
+    
+    plugins: [
+      username(),
+      twoFactor(),
+      admin(),
+      apiKey(),
+      bearer(),
+      multiSession({ maximumSessions: 5 }),
+      customSession(),
+    ],
+  });
+}
+```
+
+## Authentication Methods
+
+### Username/Password Authentication
+
+Users can authenticate with either username or email:
+
+```typescript
+// Email-based login
+const result = await authClient.signIn.email({
+  email: 'user@example.com',
+  password: 'secure-password',
+  rememberMe: true,
+});
+
+// Username-based login
+const result = await authClient.signIn.username({
+  username: 'john',
+  password: 'secure-password',
+  rememberMe: true,
+});
+```
+
+**Password Requirements:**
+- Hashed using bcrypt with cost factor 12
+- Minimum length enforced by validation
+- Can be force-reset by administrators
+
+```typescript
+// From: server/utils/auth.ts
+password: {
+  hash: async (password: string) => {
+    return await bcrypt.hash(password, 12);
+  },
+  verify: async ({ hash, password }: { hash: string; password: string }) => {
+    return await bcrypt.compare(password, hash);
+  },
+}
+```
+
+### Two-Factor Authentication (2FA)
+
+XyraPanel supports TOTP-based 2FA:
+
+```typescript
+// Enable 2FA
+const { secret, qrCode } = await authClient.twoFactor.enable();
+
+// Verify setup
+await authClient.twoFactor.verify({
+  code: '123456',
+});
+
+// Login with 2FA
+const result = await authClient.signIn.username({
+  username: 'john',
+  password: 'password',
+});
+
+if (result.twoFactorRequired) {
+  await authClient.twoFactor.verify({
+    code: '123456',
+  });
+}
+```
+
+**2FA Configuration:**
+
+```typescript
+twoFactor({
+  issuer: runtimeConfig.public.appName || 'XyraPanel',
+})
+```
+
+Backup codes are stored in the `two_factor` table for account recovery.
+
+### API Key Authentication
+
+API keys provide programmatic access to the panel:
+
+```typescript
+// Create an API key
+const apiKey = await authClient.apiKey.create({
+  name: 'My API Key',
+  expiresIn: 90, // days
+  permissions: {
+    servers: ['read', 'write'],
+    users: ['read'],
+  },
+});
+
+// Use the API key
+fetch('/api/servers', {
+  headers: {
+    'Authorization': `Bearer ${apiKey.key}`,
+    // or
+    'X-API-Key': apiKey.key,
+  },
+});
+```
+
+**API Key Features:**
+- Hashed storage for security
+- Custom expiration times (1-90 days)
+- Per-resource permissions
+- Rate limiting support
+- Last used tracking
+
+```typescript
+// From: server/utils/auth.ts
+apiKey({
+  apiKeyHeaders: ['x-api-key'],
+  customAPIKeyGetter: (ctx: ApiKeyRequestContext) => {
+    const bearerHeader = ctx.headers?.get('authorization');
+    if (bearerHeader?.startsWith('Bearer ')) {
+      return bearerHeader.slice(7).trim();
+    }
+    return ctx.headers?.get('x-api-key') || null;
+  },
+  enableSessionForAPIKeys: true,
+  disableKeyHashing: false,
+  defaultKeyLength: 32,
+  fallbackToDatabase: true,
+  keyExpiration: {
+    defaultExpiresIn: 60 * 60 * 24 * 90, // 90 days
+    minExpiresIn: 1,
+    maxExpiresIn: 90,
+  },
+})
+```
+
+### OAuth Providers
+
+Better Auth supports OAuth providers for social login (extensible):
+
+```typescript
+// Example: GitHub OAuth
+account: {
+  fields: {
+    providerId: 'provider',
+    accountId: 'providerAccountId',
+  },
+  accountLinking: {
+    enabled: true,
+    allowDifferentEmails: false,
+    updateUserInfoOnLink: true,
+  },
+}
+```
+
+## Session Management
+
+### Session Lifecycle
+
+```typescript
+session: {
+  expiresIn: 14 * 24 * 60 * 60,  // Session expires after 14 days
+  updateAge: 12 * 60 * 60,        // Session refreshed every 12 hours
+  freshAge: 5 * 60,               // Session considered fresh for 5 minutes
+  cookieCache: {
+    enabled: true,
+    maxAge: 5 * 60,               // Cache session in cookie for 5 minutes
+    strategy: 'compact',
+  },
+}
+```
+
+### Multi-Session Support
+
+Users can have up to 5 active sessions:
+
+```typescript
+multiSession({
+  maximumSessions: 5,
+})
+```
+
+Sessions are tracked with metadata:
+
+```typescript
+// From: server/database/schema.ts
+export const sessionMetadata = pgTable('session_metadata', {
+  sessionToken: text('session_token').primaryKey(),
+  firstSeenAt: timestamp('first_seen_at', { mode: 'string' }),
+  lastSeenAt: timestamp('last_seen_at', { mode: 'string' }),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  deviceName: text('device_name'),
+  browserName: text('browser_name'),
+  osName: text('os_name'),
+});
+```
+
+### Session Impersonation
+
+Administrators can impersonate users:
+
+```typescript
+admin({
+  adminRoles: ['admin'],
+  defaultRole: 'user',
+  impersonationSessionDuration: 60 * 60, // 1 hour
+  defaultBanReason: 'No reason provided',
+  bannedUserMessage: 'You have been banned from this application.',
+})
+```
+
+Impersonation is tracked in the sessions table:
+
+```typescript
+impersonatedBy: text('impersonated_by').references(() => users.id, { onDelete: 'set null' })
+```
+
+## Global Authentication Middleware
+
+All requests pass through the global auth middleware (`server/middleware/auth.global.ts`):
+
+```typescript
+export default defineEventHandler(async (event) => {
+  const path = getRequestURL(event).pathname;
+  
+  // Skip assets and public paths
+  if (isAssetPath(path) || isPublicApiPath(path) || isPublicPagePath(path)) {
+    return;
+  }
+  
+  // Check for API key authentication
+  if (path.startsWith('/api/')) {
+    const authorization = getHeader(event, 'authorization');
+    const apiKey = getHeader(event, 'x-api-key');
+    
+    if (apiKey || authorization?.startsWith('Bearer ')) {
+      const apiKeyValue = apiKey || authorization?.slice(7);
+      
+      const verification = await auth.api.verifyApiKey({
+        body: { key: apiKeyValue },
+        headers: getAuthHeaders(event),
+      });
+      
+      if (verification.valid) {
+        // Set API key context
+        event.context.auth = {
+          session: null,
+          user: { id: verification.key.userId, ... },
+          apiKey: {
+            id: verification.key.id,
+            userId: verification.key.userId,
+            permissions: verification.key.permissions,
+          },
+        };
+        return;
+      }
+    }
+  }
+  
+  // Check session authentication
+  const session = await getServerSession(event);
+  
+  if (!session?.user?.id) {
+    if (path.startsWith('/api/')) {
+      throw createError({ status: 401, message: 'Authentication required.' });
+    }
+    return redirectToLogin(event, requestUrl);
+  }
+  
+  // Set session context
+  event.context.auth = {
+    session: { ...session, user },
+    user,
+  };
+});
+```
+
+### Protected Routes
+
+**Protected Pages:**
+- `/` (Dashboard)
+- `/account/*` (Account settings)
+- `/admin/*` (Admin panel - requires admin role)
+- `/server/*` (Server management)
+
+**Protected API Routes:**
+- All routes except:
+  - `/api/auth/*` (Authentication endpoints)
+  - `/api/account/register` (Registration)
+  - `/api/branding` (Public branding)
+  - `/api/remote/*` (Wings callbacks)
+  - `/api/system` (System status)
+
+## Rate Limiting
+
+Better Auth includes built-in rate limiting:
+
+```typescript
+rateLimit: {
+  enabled: true,
+  window: 60,  // 60 seconds
+  max: 100,    // 100 requests per window
+  storage: 'database',
+  customRules: {
+    '/sign-in/email': {
+      window: 10,
+      max: 3,  // 3 attempts per 10 seconds
+    },
+    '/sign-in/username': {
+      window: 10,
+      max: 3,
+    },
+    '/two-factor/verify': {
+      window: 10,
+      max: 3,
+    },
+    '/change-password': {
+      window: 60,
+      max: 5,
+    },
+    '/api-key/create': {
+      window: 60,
+      max: 10,
+    },
+  },
+}
+```
+
+Rate limits are stored in the database:
+
+```typescript
+export const rateLimit = pgTable(
+  'rate_limit',
+  {
+    id: text('id').primaryKey(),
+    key: text('key').notNull().unique(),
+    count: integer('count').notNull().default(0),
+    lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    index('rate_limit_key_index').on(table.key),
+    index('rate_limit_last_request_index').on(table.lastRequest),
+  ],
+);
+```
+
+## Security Features
+
+### Secret Validation
+
+Production environments enforce strong secrets:
+
+```typescript
+function assertSecretSecurity(isProduction: boolean, secret: string | undefined): void {
+  if (!isProduction) {
+    return;
+  }
+  
+  if (!secret || secret.length < 32) {
+    throw new Error('BETTER_AUTH_SECRET must be at least 32 characters in production.');
+  }
+  
+  const weakSecretPatterns = [
+    'changeme', 'change-me', 'password', 'secret',
+    'xyrapanel', 'default', 'example',
+  ];
+  
+  const normalizedSecret = secret.toLowerCase();
+  if (weakSecretPatterns.some(pattern => normalizedSecret.includes(pattern))) {
+    throw new Error('BETTER_AUTH_SECRET appears weak or default-like.');
+  }
+}
+```
+
+### CSRF Protection
+
+CSRF protection is enabled by default:
+
+```typescript
+advanced: {
+  disableCSRFCheck: false,
+  disableOriginCheck: !isProduction,
+  useSecureCookies: isProduction,
+}
+```
+
+### Trusted Origins
+
+Only configured origins can authenticate:
+
+```typescript
+const trustedOrigins: string[] = [];
+
+if (baseURL) {
+  trustedOrigins.push(baseURL);
+}
+
+if (process.env.BETTER_AUTH_TRUSTED_ORIGINS) {
+  const additionalOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+  trustedOrigins.push(...additionalOrigins);
+}
+```
+
+### IP Address Detection
+
+Supports various proxy headers:
+
+```typescript
+const ipAddressHeaders = process.env.BETTER_AUTH_IP_HEADER
+  ? [process.env.BETTER_AUTH_IP_HEADER]
+  : ['cf-connecting-ip', 'x-forwarded-for', 'x-real-ip'];
+```
+
+## Client-Side Authentication
+
+The client uses the Better Auth Vue plugin:
+
+```typescript
+// From: app/utils/auth-client.ts
+import { createAuthClient } from 'better-auth/vue';
+import {
+  usernameClient,
+  twoFactorClient,
+  customSessionClient,
+  apiKeyClient,
+  adminClient,
+  multiSessionClient,
+} from 'better-auth/client/plugins';
+
+export const authClient = createAuthClient({
+  plugins: [
+    usernameClient(),
+    twoFactorClient({
+      onTwoFactorRedirect() {},
+    }),
+    apiKeyClient(),
+    adminClient(),
+    multiSessionClient(),
+    customSessionClient<typeof auth>(),
+  ],
+});
+```
+
+### Usage in Components
+
+```vue
+<script setup lang="ts">
+import { authClient } from '~/utils/auth-client';
+
+const { data: session } = authClient.useSession();
+
+const signIn = async () => {
+  await authClient.signIn.username({
+    username: 'john',
+    password: 'password',
+  });
+};
+
+const signOut = async () => {
+  await authClient.signOut();
+};
+</script>
+
+<template>
+  <div v-if="session">
+    <p>Welcome, {{ session.user.username }}!</p>
+    <button @click="signOut">Sign Out</button>
+  </div>
+  <div v-else>
+    <button @click="signIn">Sign In</button>
+  </div>
+</template>
+```
+
+## Email Notifications
+
+Authentication triggers various email notifications:
+
+### Password Reset
+
+```typescript
+sendResetPassword: async ({ user, token }, _request) => {
+  const { sendPasswordResetEmail, resolvePanelBaseUrl } = await import('#server/utils/email');
+  const resetBaseUrl = `${resolvePanelBaseUrl()}/auth/password/reset`;
+  void sendPasswordResetEmail(user.email, token, resetBaseUrl);
+}
+```
+
+### Email Verification
+
+```typescript
+emailVerification: {
+  sendOnSignUp: true,
+  sendOnSignIn: false,
+  autoSignInAfterVerification: true,
+  expiresIn: 60 * 60 * 24, // 24 hours
+  sendVerificationEmail: async ({ user, token }) => {
+    const { sendEmailVerificationEmail } = await import('#server/utils/email');
+    void sendEmailVerificationEmail({
+      to: user.email,
+      token,
+      expiresAt: new Date(Date.now() + 60 * 60 * 24 * 1000),
+      username: user.username,
+    });
+  },
+}
+```
+
+### Account Deletion
+
+```typescript
+deleteUser: {
+  enabled: true,
+  sendDeleteAccountVerification: async ({ user, url }) => {
+    const { sendEmail } = await import('#server/utils/email');
+    void sendEmail({
+      to: user.email,
+      subject: 'Confirm Account Deletion',
+      html: `
+        <h2>Confirm Account Deletion</h2>
+        <p>Click the link below to confirm account deletion:</p>
+        <p><a href="${url}">Delete My Account</a></p>
+      `,
+    });
+  },
+  beforeDelete: async (user) => {
+    // Prevent admin deletion
+    const dbUser = await db.select().from(tables.users).where(eq(tables.users.id, user.id));
+    if (dbUser[0]?.rootAdmin || dbUser[0]?.role === 'admin') {
+      throw new APIError('BAD_REQUEST', {
+        message: 'Admin accounts cannot be deleted',
+      });
+    }
+  },
+}
+```
+
+## Environment Variables
+
+<ParamField path="BETTER_AUTH_SECRET" type="string" required>
+  Secret key for signing tokens (min 32 characters in production)
+</ParamField>
+
+<ParamField path="BETTER_AUTH_URL" type="string" required>
+  Base URL of the panel (required in production)
+</ParamField>
+
+<ParamField path="BETTER_AUTH_TRUSTED_ORIGINS" type="string">
+  Comma-separated list of trusted origins for CORS
+</ParamField>
+
+<ParamField path="BETTER_AUTH_IP_HEADER" type="string">
+  Custom header for client IP detection (default: cf-connecting-ip, x-forwarded-for, x-real-ip)
+</ParamField>
+
+<ParamField path="CAPTCHA_PROVIDER" type="string">
+  CAPTCHA provider: `turnstile`, `recaptcha`, or `hcaptcha`
+</ParamField>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Wings Integration" icon="server" href="/advanced/wings-integration">
+    Learn about Wings integration
+  </Card>
+  <Card title="Database Schema" icon="database" href="/advanced/database-schema">
+    Explore the database schema
+  </Card>
+</CardGroup>

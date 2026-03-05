@@ -1,0 +1,405 @@
+---
+title: Email Configuration
+description: Configure email notifications and SMTP settings
+---
+
+XyraPanel sends transactional emails for password resets, email verification, welcome messages, and server notifications. Email configuration is managed through the admin panel's settings interface, not environment variables.
+
+<Note>
+  Email configuration is stored in the database and can be updated at runtime through the admin panel at `/admin/settings/email`.
+</Note>
+
+## Email Drivers
+
+XyraPanel supports multiple email delivery methods:
+
+### SMTP (Recommended)
+
+Send emails via SMTP server. Compatible with most email providers.
+
+**Use cases:**
+- Gmail, Office 365, or custom mail servers
+- Self-hosted mail servers
+- General-purpose SMTP providers
+
+### Sendmail
+
+Use the system's sendmail binary.
+
+**Use cases:**
+- Systems with sendmail/postfix already configured
+- Simple local mail delivery
+
+<Warning>
+  Sendmail requires proper server configuration and is less reliable than SMTP for most use cases.
+</Warning>
+
+### Mailgun
+
+Dedicated Mailgun driver (API-based).
+
+**Use cases:**
+- High-volume transactional email
+- Advanced deliverability features
+
+## SMTP Configuration
+
+When using SMTP driver, configure these settings in the admin panel:
+
+<ParamField path="driver" type="string" default="smtp">
+  Email driver to use: `smtp`, `sendmail`, or `mailgun`.
+</ParamField>
+
+<ParamField path="service" type="string" optional>
+  Pre-configured SMTP service provider. Supported values:
+  
+  - `gmail` - Gmail
+  - `outlook` - Outlook/Office 365  
+  - `yahoo` - Yahoo Mail
+  - `icloud` - iCloud Mail
+  - `mailgun` - Mailgun
+  - `sendgrid` - SendGrid
+  - `mailjet` - Mailjet
+  - `mailtrap` - Mailtrap (testing)
+  - `zoho` - Zoho Mail
+  - Custom - Leave blank and configure host/port manually
+  
+  <Note>When using a pre-configured service, you only need to provide username and password. Host and port are set automatically.</Note>
+</ParamField>
+
+<ParamField path="host" type="string" required>
+  SMTP server hostname (e.g., `smtp.gmail.com`).
+  
+  Required only when `service` is not set.
+</ParamField>
+
+<ParamField path="port" type="number" default="587">
+  SMTP server port:
+  
+  - `587` - TLS/STARTTLS (recommended)
+  - `465` - SSL
+  - `25` - Unencrypted (not recommended)
+</ParamField>
+
+<ParamField path="encryption" type="string" default="tls">
+  Encryption method:
+  
+  - `tls` - STARTTLS (port 587)
+  - `ssl` - SSL/TLS (port 465)
+  - `none` - No encryption (not recommended)
+</ParamField>
+
+<ParamField path="username" type="string" required>
+  SMTP authentication username (usually your email address).
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  SMTP authentication password or app-specific password.
+  
+  <Warning>Use app-specific passwords for Gmail and other providers that support them. Never use your main account password!</Warning>
+</ParamField>
+
+<ParamField path="fromAddress" type="string" required>
+  Email address used in the "From" field (e.g., `noreply@example.com`).
+</ParamField>
+
+<ParamField path="fromName" type="string" default="XyraPanel">
+  Display name used in the "From" field.
+</ParamField>
+
+## Provider-Specific Setup
+
+<AccordionGroup>
+  <Accordion title="Gmail">
+    ### Gmail Setup
+    
+    1. Enable 2-factor authentication on your Google account
+    2. Generate an app-specific password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+    3. Configure in admin panel:
+    
+    ```
+    Driver: smtp
+    Service: gmail
+    Username: your-email@gmail.com
+    Password: your-app-specific-password
+    From Address: your-email@gmail.com
+    From Name: YourPanel Name
+    ```
+    
+    <Note>Gmail limits sending to 500 emails per day for free accounts.</Note>
+  </Accordion>
+  
+  <Accordion title="Office 365 / Outlook">
+    ### Office 365 / Outlook Setup
+    
+    1. Use your Office 365 email and password
+    2. If using 2FA, create an app password
+    3. Configure in admin panel:
+    
+    ```
+    Driver: smtp
+    Service: outlook
+    Username: your-email@outlook.com
+    Password: your-password-or-app-password
+    From Address: your-email@outlook.com
+    From Name: YourPanel Name
+    ```
+  </Accordion>
+  
+  <Accordion title="Custom SMTP Server">
+    ### Custom SMTP Server
+    
+    For custom mail servers, leave `service` blank and configure manually:
+    
+    ```
+    Driver: smtp
+    Service: (leave blank)
+    Host: mail.example.com
+    Port: 587
+    Encryption: tls
+    Username: noreply@example.com
+    Password: your-smtp-password
+    From Address: noreply@example.com
+    From Name: YourPanel Name
+    ```
+  </Accordion>
+  
+  <Accordion title="SendGrid">
+    ### SendGrid Setup
+    
+    1. Create a SendGrid account and API key at [sendgrid.com](https://sendgrid.com)
+    2. Configure in admin panel:
+    
+    ```
+    Driver: smtp
+    Service: sendgrid
+    Username: apikey
+    Password: your-sendgrid-api-key
+    From Address: noreply@yourdomain.com
+    From Name: YourPanel Name
+    ```
+    
+    <Note>SendGrid requires domain verification for production use.</Note>
+  </Accordion>
+  
+  <Accordion title="Mailgun">
+    ### Mailgun Setup
+    
+    Option 1: Use SMTP driver
+    ```
+    Driver: smtp
+    Service: mailgun
+    Username: postmaster@your-domain.mailgun.org
+    Password: your-mailgun-smtp-password
+    From Address: noreply@yourdomain.com
+    From Name: YourPanel Name
+    ```
+    
+    Option 2: Use Mailgun driver (API-based)
+    ```
+    Driver: mailgun
+    # Additional Mailgun-specific configuration
+    ```
+  </Accordion>
+  
+  <Accordion title="Mailtrap (Testing)">
+    ### Mailtrap for Testing
+    
+    Mailtrap catches all emails for testing without sending to real recipients.
+    
+    1. Create account at [mailtrap.io](https://mailtrap.io)
+    2. Get SMTP credentials from your inbox
+    3. Configure in admin panel:
+    
+    ```
+    Driver: smtp
+    Service: mailtrap
+    Username: your-mailtrap-username
+    Password: your-mailtrap-password
+    From Address: test@example.com
+    From Name: XyraPanel Test
+    ```
+    
+    <Warning>Only use Mailtrap in development! Emails won't be delivered in production.</Warning>
+  </Accordion>
+</AccordionGroup>
+
+## Email Templates
+
+XyraPanel sends emails for these events:
+
+| Template | Purpose | Trigger |
+|----------|---------|----------|
+| **Welcome Email** | Welcome new users | User account created |
+| **Email Verification** | Verify email addresses | New user registration |
+| **Password Reset** | Reset forgotten password | User requests password reset |
+| **Server Created** | Notify of new server | Server provisioned for user |
+| **Server Suspended** | Notify of suspension | Server suspended by admin |
+| **Server Reinstalled** | Notify of reinstallation | Server reinstalled |
+| **Backup Completed** | Notify of backup success | Backup creation completed |
+| **Admin User Created** | Provide login details | Admin creates user account |
+
+<Note>
+  Email templates can be customized through the admin panel at `/admin/settings/email/templates`.
+</Note>
+
+## Testing Email Configuration
+
+After configuring email settings:
+
+<Steps>
+  <Step title="Save configuration">
+    Update email settings in the admin panel at `/admin/settings/email`.
+  </Step>
+  
+  <Step title="Send test email">
+    Use the "Send Test Email" button in the admin panel to verify configuration.
+  </Step>
+  
+  <Step title="Check delivery">
+    Verify the test email arrives in your inbox and isn't marked as spam.
+  </Step>
+  
+  <Step title="Test password reset">
+    Try the "Forgot Password" flow on the login page to test real-world usage.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Authentication failed">
+    **Symptoms:** "Authentication failed" or "Invalid credentials" errors
+    
+    **Solutions:**
+    - Verify username and password are correct
+    - Use app-specific passwords for Gmail, Office 365, etc.
+    - Check if your email provider requires 2FA
+    - Ensure "less secure app access" is enabled (if applicable)
+  </Accordion>
+  
+  <Accordion title="Connection timeout">
+    **Symptoms:** "Connection timeout" or "Cannot connect to SMTP server"
+    
+    **Solutions:**
+    - Verify SMTP host and port are correct
+    - Check firewall allows outbound connections on the SMTP port
+    - Try different ports (587, 465, 25)
+    - Verify your server's IP isn't blocked by the email provider
+  </Accordion>
+  
+  <Accordion title="Emails marked as spam">
+    **Symptoms:** Emails arrive in spam folder
+    
+    **Solutions:**
+    - Set up SPF, DKIM, and DMARC records for your domain
+    - Use a verified sending domain
+    - Ensure "From Address" matches your authenticated domain
+    - Use a reputable email service provider
+    - Avoid sending too many emails too quickly
+  </Accordion>
+  
+  <Accordion title="Emails not sending">
+    **Symptoms:** No errors but emails don't arrive
+    
+    **Solutions:**
+    - Check XyraPanel logs for email sending errors
+    - Verify email configuration is saved correctly
+    - Test with Mailtrap to isolate delivery vs configuration issues
+    - Check email provider's sending limits
+    - Verify recipient email address is valid
+  </Accordion>
+  
+  <Accordion title="SSL/TLS errors">
+    **Symptoms:** "SSL/TLS handshake failed" or certificate errors
+    
+    **Solutions:**
+    - Try switching between `tls` (port 587) and `ssl` (port 465)
+    - Verify your server has up-to-date CA certificates
+    - Check if your SMTP provider has valid SSL certificates
+    - Try connecting with `openssl s_client -connect smtp.host.com:587 -starttls smtp`
+  </Accordion>
+</AccordionGroup>
+
+## Email Service Recommendations
+
+### For Production
+
+<CardGroup cols={2}>
+  <Card title="SendGrid" icon="envelope" href="https://sendgrid.com">
+    Reliable, high-volume email delivery with excellent deliverability.
+    
+    **Pros:** Free tier (100 emails/day), good deliverability, easy setup
+  </Card>
+  
+  <Card title="Mailgun" icon="envelope" href="https://mailgun.com">
+    Developer-friendly email API with powerful features.
+    
+    **Pros:** Free tier (1,000 emails/month), advanced features, reliable
+  </Card>
+  
+  <Card title="Amazon SES" icon="envelope" href="https://aws.amazon.com/ses/">
+    Cost-effective email service from AWS.
+    
+    **Pros:** Very cheap, scales infinitely, AWS integration
+  </Card>
+  
+  <Card title="Postmark" icon="envelope" href="https://postmarkapp.com">
+    Premium transactional email service.
+    
+    **Pros:** Excellent deliverability, great support, developer-friendly
+  </Card>
+</CardGroup>
+
+### For Testing
+
+- **Mailtrap** - Catches emails in development without sending
+- **MailHog** - Self-hosted email testing tool
+- **Gmail** - Quick setup for small deployments
+
+## Environment vs Database
+
+<Warning>
+  Email settings are stored in the **database**, not environment variables. The `.env` file does not contain email configuration.
+</Warning>
+
+This design allows:
+- Runtime configuration changes without restarts
+- Multiple administrators to manage email settings
+- Secure storage of credentials in the database
+- Easy backup and migration of settings
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use app-specific passwords">
+    Never use your primary email password. Always generate app-specific passwords for Gmail, Office 365, and other providers that support them.
+  </Accordion>
+  
+  <Accordion title="Enable TLS/SSL">
+    Always use encryption (`tls` or `ssl`) for SMTP connections. Never send credentials over unencrypted connections.
+  </Accordion>
+  
+  <Accordion title="Restrict database access">
+    Email credentials are stored encrypted in the database. Ensure your database has proper access controls.
+  </Accordion>
+  
+  <Accordion title="Use dedicated email accounts">
+    Create dedicated accounts (like `noreply@yourdomain.com`) instead of using personal email accounts.
+  </Accordion>
+  
+  <Accordion title="Monitor sending limits">
+    Be aware of your email provider's rate limits and implement appropriate throttling if needed.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/configuration/environment-variables">
+    View all configuration options
+  </Card>
+  <Card title="Security Settings" icon="shield" href="/configuration/security">
+    Configure security features
+  </Card>
+</CardGroup>
