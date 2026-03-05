@@ -1,0 +1,177 @@
+{
+  "projectType": "saas",
+  "projectName": "XyraPanel",
+  "projectDescription": "Open-source game server management panel built on Nuxt, TypeScript, and PostgreSQL",
+  "theme": "aspen",
+  "primaryColor": "#db5543",
+  "lightColor": "#871b1d",
+  "darkColor": "#fab358",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "introduction",
+              "features",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/installation",
+              "getting-started/configuration",
+              "getting-started/first-server"
+            ]
+          },
+          {
+            "group": "Server Management",
+            "pages": [
+              "servers/creating-servers",
+              "servers/server-console",
+              "servers/file-management",
+              "servers/schedules",
+              "servers/backups",
+              "servers/databases"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "admin/nodes",
+              "admin/locations",
+              "admin/eggs-and-nests",
+              "admin/users",
+              "admin/database-hosts",
+              "admin/mounts"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/security",
+              "configuration/email",
+              "configuration/captcha",
+              "configuration/redis"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "cli/overview",
+              "cli/commands"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/wings-integration",
+              "advanced/database-schema",
+              "advanced/authentication"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/rate-limits"
+            ]
+          },
+          {
+            "group": "Account",
+            "pages": [
+              "api/account/profile",
+              "api/account/api-keys",
+              "api/account/sessions",
+              "api/account/ssh-keys"
+            ]
+          },
+          {
+            "group": "Servers",
+            "pages": [
+              "api/servers/list",
+              "api/servers/create",
+              "api/servers/details",
+              "api/servers/power",
+              "api/servers/console"
+            ]
+          },
+          {
+            "group": "Admin - Servers",
+            "pages": [
+              "api/admin/servers/list",
+              "api/admin/servers/create",
+              "api/admin/servers/update",
+              "api/admin/servers/delete",
+              "api/admin/servers/actions"
+            ]
+          },
+          {
+            "group": "Admin - Nodes",
+            "pages": [
+              "api/admin/nodes/list",
+              "api/admin/nodes/create",
+              "api/admin/nodes/update",
+              "api/admin/nodes/delete"
+            ]
+          },
+          {
+            "group": "Admin - Users",
+            "pages": [
+              "api/admin/users/list",
+              "api/admin/users/create",
+              "api/admin/users/update",
+              "api/admin/users/delete"
+            ]
+          },
+          {
+            "group": "Admin - Resources",
+            "pages": [
+              "api/admin/locations",
+              "api/admin/nests",
+              "api/admin/eggs",
+              "api/admin/mounts",
+              "api/admin/database-hosts"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Game server management with Pterodactyl Wings compatibility",
+    "Real-time server console with xterm.js",
+    "File management with Monaco editor",
+    "Automated backups and schedules",
+    "User authentication with 2FA and API keys",
+    "Admin dashboard for nodes, locations, and resources",
+    "Database management and SSH key support",
+    "CLI tool for deployment and PM2 process management"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/sign-in",
+    "GET /api/account/profile",
+    "POST /api/account/api-keys",
+    "GET /api/client/servers",
+    "POST /api/client/servers/:id/power",
+    "GET /api/admin/servers",
+    "POST /api/admin/servers",
+    "GET /api/admin/nodes",
+    "POST /api/admin/nodes",
+    "GET /api/admin/users",
+    "POST /api/admin/users",
+    "xyra deploy",
+    "xyra pm2 start",
+    "xyra build"
+  ]
+}
